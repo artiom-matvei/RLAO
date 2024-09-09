@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import torch
-from torch import nn
+import torch.nn as nn
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 n_channels_hidden = 4
 n_layers = 1
@@ -131,3 +133,64 @@ class EnsembleDynamics(nn.Module):
         return torch.cat(next_states, dim=1)
         #return torch.mean(torch.cat(next_states, dim=1), dim = 1, keepdim = True)
 
+
+############### Phase Reconstruction ####################
+
+
+class Reconstructor(nn.Module):
+    def __init__(self, input_channels, output_channels, output_size, xvalid, yvalid):
+        super(Reconstructor, self).__init__()
+
+        self.xvalid = xvalid
+        self.yvalid = yvalid
+
+        self.downsampler = nn.Sequential(
+            nn.Conv2d(input_channels, 64, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.ReLU(),
+            # Additional layers can be added if more downsampling is needed
+        )
+
+        # Final layer to adjust the output to exactly m x m
+        self.final_conv = nn.Conv2d(256, output_channels, kernel_size=3, padding=1)
+        self.final_pool = nn.AdaptiveAvgPool2d(output_size)  # Output size mxm
+
+    def forward(self, x):
+        x = self.downsampler(x)
+        x = self.final_conv(x)
+        x = self.final_pool(x)
+
+        # Mask out the invalid region
+        x_out = torch.zeros_like(x)
+        x_out[:,:,self.xvalid, self.yvalid] = x[:,:,self.xvalid, self.yvalid]
+
+        return x_out
+    
+
+class ImageDataset(Dataset):
+    def __init__(self, dataframe, input_col, output_col, transform=None):
+        self.dataframe = dataframe
+        self.input_col = input_col
+        self.output_col = output_col
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, idx):
+        # Load input image and target from the dataframe
+        input_image = self.dataframe.iloc[idx][self.input_col]
+        target_image = self.dataframe.iloc[idx][self.output_col]
+        
+        # Convert to float and apply any transformations (like normalization)
+        input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
+        target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
+
+        if self.transform:
+            input_image = self.transform(input_image)
+            target_image = self.transform(target_image)
+
+        return input_image, target_image
