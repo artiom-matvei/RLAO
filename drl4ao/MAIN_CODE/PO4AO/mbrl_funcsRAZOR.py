@@ -13,6 +13,8 @@ import random
 import os
 import matplotlib.pyplot as plt
 from OOPAOEnv.OOPAOEnvRazor import OOPAO
+import pandas as pd
+from torch.utils.data import DataLoader
 
 
 random.seed(5)
@@ -20,13 +22,13 @@ torch.manual_seed(5)
 np.random.seed(5)
 
 
-def get_env(args, gainCL=0.2):
+def get_env(args, gainCL=0.2, wfs_type='shackhartmann'):
     """Sets the OOPAO environment with the configuration file and wrappers it with torch.
     :return env: TorchWrapped OOPAO initialized environment.
     """
     env = OOPAO()
     env.set_params_file(args.param_file,args.oopao_path) # set parameter file
-    env.set_params(args, "shackhartmann", gainCL=gainCL)   #sets env parameter file
+    env.set_params(args, wfs_type, gainCL=gainCL)   #sets env parameter file
     if args.delay < 0:
         env = TimeDelayEnv(env, args.delay)
     return TorchWrapper(env)
@@ -215,5 +217,68 @@ def train_policy(opt, policy, dynamics, replay,device,n_history, max_ts, batch_s
 
     policy.to('cpu')
     dynamics.to('cpu')
+
+    return loss.item()
+
+
+####################### Phase Reconstruction ############################
+
+def get_phase_dataset(env, size):
+    """Creates a pandas DataFrame with wavefront sensor measurements
+    and corresponding mirror shapes."""
+
+    # Create random OPD maps
+    tel_res = env.dm.resolution
+    wfs_res = env.wfs.cam.resolution
+
+    true_phase = np.zeros((tel_res,tel_res,size))
+
+    dataset = pd.DataFrame(columns=['wfs', 'dm'])
+
+    for i in range(size):
+        env.atm.generateNewPhaseScreen(i * np.random.randint(1, 10000))
+
+        env.tel*env.wfs
+
+        dataset.loc[i] = {'wfs': np.array(env.wfs.cam.frame.copy()), 'dm': np.array(env.OPD_on_dm())}
+        true_phase[:,:,i] = env.tel.OPD
+
+    return true_phase, dataset
+
+
+def train_reconstructor(reconstructor, OPD_model, dataset, optimizer, criterion, n_epochs):
+    """Trains the phase reconstructor model on the dataset of wavefront sensor measurements
+    and corresponding mirror shapes."""
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    reconstructor.train()
+    reconstructor.to(device)
+
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    for epoch in range(n_epochs):
+        running_loss = 0.0
+        for inputs, targets in dataloader:
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # Forward pass
+            outputs = reconstructor(inputs)
+
+            # Get the OPD from the model
+            dm_OPD = OPD_model(inputs)
+
+            loss = criterion(dm_OPD, targets)
+            
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        print(f"Epoch {epoch+1}/{n_epochs}, Loss: {running_loss/len(dataloader)}")
+
+    reconstructor.to('cpu')
 
     return loss.item()
