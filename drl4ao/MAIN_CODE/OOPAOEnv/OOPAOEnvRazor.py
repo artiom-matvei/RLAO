@@ -312,6 +312,8 @@ class OOPAO(gym.Env):
         self.reconstructor = M2C_CL@calib_CL.M
         self.F = M2C_CL @ np.linalg.pinv(M2C_CL)
 
+        self.dm_proj = self.compute_dm_proj()
+
 
     def set_wfs(self,param,type = "pyramid"):
         if type == "pyramid":
@@ -561,4 +563,19 @@ class OOPAO(gym.Env):
 
         plt.yscale('log')
         plt.show()
+
+    def compute_dm_proj(self):
+        modes = self.dm.modes.copy()
+        inv_proj = np.linalg.inv(np.matmul(modes.T, modes))
+        
+        return np.matmul(inv_proj, modes.T)
+
+
+    def OPD_on_dm(self):
+        res = self.dm.resolution
+        phase = self.tel.OPD.copy().reshape(res*res)
+        proj1 = np.matmul(self.dm_proj, phase)
+        dm_OPD =  np.reshape(np.matmul(self.dm.modes, proj1), (res,res))
+
+        return dm_OPD
         
