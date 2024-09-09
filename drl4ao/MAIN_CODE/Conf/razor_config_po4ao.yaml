@@ -1,0 +1,32 @@
+save_all_PSF: False
+savedir: 'many_threshold'
+experiment_tag: 'gains'
+oopao_path: 'AO_OOPAO'
+param_file: 'Conf.parameter_fileRAZOR_SHWFS'
+
+r0: 0.1
+L0: 30
+fractionalR0: [1]
+windSpeed: [2]
+windDirection: [0]
+altitude: [0]
+
+nLoop: 5000 #10000
+gainCL: 0.2
+gain_list: [0.15,0.2,0.25,0.3,0.35]
+frames_per_sec: 500
+delay: 0
+
+anim: False
+anim_len: 500
+
+initial_sigma: 0.2
+iters: 100
+max_ts: 500
+n_history: 20
+T: 5
+data_shape: 11
+device: 'cuda:0'
+warmup_ts: 20
+contrast: False
+batch_size: 32

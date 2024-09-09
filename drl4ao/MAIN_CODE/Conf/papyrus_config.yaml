@@ -1,0 +1,30 @@
+save_all_PSF: False
+savedir: 'updated_code'
+experiment_tag: test
+oopao_path: 'AO_OOPAO'
+param_file: 'Conf.parameterFile_oopao_parser'
+
+r0: 0.13
+L0: 30
+fractionnalR0: [0.45,0.1,0.1,0.25,0.1]
+windSpeed: [10,12,11,15,20]
+windDirection: [0,72,144,216,288]
+altitude: [0,1000,5000,10000,12000]
+
+nLoop: 10000
+gainCL: 0.5
+gain_list: [0.5]
+frames_per_sec: 500
+delay: 0
+
+initial_sigma: 0.2
+iters: 20
+max_ts: 500
+n_history: 20
+T: 5
+data_shape: 21
+device: 'cuda:0'
+warmup_ts: 1
+contrast: False
+batch_size: 32
+num_seeds: 5

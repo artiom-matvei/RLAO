@@ -1,0 +1,7 @@
+This is the OOPAO version from 30/07/2024 last commit "Added SpatialFilter and update ShackHartmann and Telescope classes accordingly." from the main branch
+SHA code: 858f2daf970ee3d702d986617eeae5d4b3b52d51
+
+To download an specific version of OOPAO do the following:
+
+1. git clone https://github.com/cheritier/OOPAO.git
+2. git reset --hard SHA_code
