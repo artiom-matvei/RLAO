@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+
 n_channels_hidden = 4
 n_layers = 1
 n_filt = 64

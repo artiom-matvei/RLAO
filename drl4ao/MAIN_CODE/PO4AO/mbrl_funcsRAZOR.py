@@ -229,19 +229,23 @@ def get_phase_dataset(env, size):
 
     # Create random OPD maps
     tel_res = env.dm.resolution
-    wfs_res = env.wfs.cam.resolution
 
     true_phase = np.zeros((tel_res,tel_res,size))
 
     dataset = pd.DataFrame(columns=['wfs', 'dm'])
 
+    seeds = np.random.randint(1, 10000, size=size)
+
     for i in range(size):
-        env.atm.generateNewPhaseScreen(i * np.random.randint(1, 10000))
+        env.atm.generateNewPhaseScreen(seeds[i])
 
         env.tel*env.wfs
 
         dataset.loc[i] = {'wfs': np.array(env.wfs.cam.frame.copy()), 'dm': np.array(env.OPD_on_dm())}
         true_phase[:,:,i] = env.tel.OPD
+
+        if i % 100 == 0:
+            print(f"Generated {i} samples")
 
     return true_phase, dataset
 
@@ -262,12 +266,14 @@ def train_reconstructor(reconstructor, OPD_model, dataset, optimizer, criterion,
         for inputs, targets in dataloader:
             # Zero the parameter gradients
             optimizer.zero_grad()
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             
             # Forward pass
             outputs = reconstructor(inputs)
 
             # Get the OPD from the model
-            dm_OPD = OPD_model(inputs)
+            dm_OPD = OPD_model(outputs)
 
             loss = criterion(dm_OPD, targets)
             

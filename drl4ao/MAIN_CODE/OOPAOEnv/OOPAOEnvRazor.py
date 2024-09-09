@@ -7,6 +7,7 @@ from OOPAOEnv.__load__oopao import load_oopao
 import matplotlib.pyplot as plt
 import numpy as np
 import gym
+import torch
 
 class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
@@ -58,6 +59,8 @@ class OOPAO(gym.Env):
         self.nActuator = None
         self.xvalid = None
         self.yvalid = None
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
     def reset(self):
@@ -521,7 +524,7 @@ class OOPAO(gym.Env):
         return self.vec_to_img(noise)
     
     def vec_to_img(self, action_vec):
-        valid_actus = np.zeros((self.nActuator , self.nActuator))
+        valid_actus = torch.zeros((self.nActuator , self.nActuator)).to(self.device)
         valid_actus[self.xvalid, self.yvalid] = action_vec
 
         return valid_actus
@@ -529,7 +532,7 @@ class OOPAO(gym.Env):
     def img_to_vec(self, action):
         assert len(action.shape) == 2
         
-        return action[self.xvalid, self.yvalid]
+        return action[:,:,self.xvalid, self.yvalid]
     
 
     def change_mag(self, mag):
