@@ -20,16 +20,17 @@ from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
-args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
 
+savedir = os.path.dirname(__file__)
 #%%
 env = get_env(args)
 #%%
 
 # Generate the dataset of wfs images and phase maps
-phase, dataset = get_phase_dataset(env, 2048)
+_, dataset = get_phase_dataset(env, 4096)
 
-dataset.to_pickle('phase_dataset.pkl')
+dataset.to_pickle(savedir+'/phase_dataset_big.pkl')
 
 
 # %%
@@ -49,9 +50,8 @@ def OPD_model(dm_cmd, modes, res):
     return dm_opd
 
 # %%
-savedir = os.path.dirname(__file__)
 
-dataset_raw = pd.read_pickle(savedir+'phase_dataset.pkl').reset_index(drop=True)
+dataset_raw = pd.read_pickle(savedir+'/phase_dataset_big.pkl').reset_index(drop=True)
 ds_torch = ImageDataset(dataset_raw, 'wfs', 'dm')
 
 # %%
@@ -66,7 +66,7 @@ reconstructor.to(device)
 dataloader = DataLoader(ds_torch, batch_size=32, shuffle=True)
 
 
-n_epochs = 10
+n_epochs = 100
 for epoch in range(n_epochs):
     running_loss = 0.0
     for inputs, targets in dataloader:
@@ -93,5 +93,5 @@ for epoch in range(n_epochs):
 
 
 
-torch.save(reconstructor.state_dict(), savedir+'reconstructor.pt')
+torch.save(reconstructor.state_dict(), savedir+'/reconstructor.pt')
 # %%

@@ -3,7 +3,7 @@ logs/
 data_cl/
 env_var.sh
 # Job files
-.out
+*.out
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
