@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
-from torchvision import transforms
 
 n_channels_hidden = 4
 n_layers = 1
