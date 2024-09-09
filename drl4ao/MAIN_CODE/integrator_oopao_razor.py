@@ -5,6 +5,7 @@ OOPAO module for the integrator
 
 #%%
 import os,sys
+import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
@@ -16,9 +17,9 @@ from Plots.plots import save_plots
 # import argparse
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset
 from types import SimpleNamespace
-
+import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
 args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
@@ -145,5 +146,46 @@ plt.ylabel('Strehl Ratio')
 plt.title('Average Integrator Performance vs Gain')
 
 # Display the plot
+plt.show()
+# %%
+env = get_env(args)
+
+
+fig, ax = plt.subplots(3,5, figsize=(20,15))
+
+print('Starting Loop')
+
+phase, dataset = get_phase_dataset(env, 5)
+
+for i in range(5):
+
+    cax1 = ax[0,i].imshow(phase[:,:,i])
+    cax2 = ax[1,i].imshow(dataset['dm'][i])
+    cax3 = ax[2,i].imshow(dataset['wfs'][i])
+
+    ax[0,i].axis('off')
+    ax[1,i].axis('off')
+    ax[2,i].axis('off')
+
+    ax[0,i].set_title('Random Phase', size=15)
+    ax[1,i].set_title('Phase Projected onto DM', size=15)
+    ax[2,i].set_title('WFS Image', size=15)
+
+plt.tight_layout()
+
+plt.show()
+# %%
+
+from PO4AO.conv_models_simple import Reconstructor
+
+net = Reconstructor(1,1,11, env.xvalid, env.yvalid)
+
+wfs_img = torch.from_numpy(dataset['wfs'][0]).float().unsqueeze(0).unsqueeze(0)
+
+pred = net(wfs_img)
+
+print(f'Input dims: {wfs_img.shape}, Output dims: {pred.shape}')
+
+plt.imshow(pred[0,0,:,:].detach().numpy())
 plt.show()
 # %%
