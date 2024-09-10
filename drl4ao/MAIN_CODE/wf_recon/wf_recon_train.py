@@ -32,7 +32,7 @@ env = get_env(args)
 #%%
 
 # Generate the dataset of wfs images and phase maps
-dataset = make_diverse_dataset(env, size=1000, n_scale=20)
+dataset = make_diverse_dataset(env, size=10, num_scale=20)
 
 dataset.to_pickle(savedir+'/diverse_phases_test.pkl')
 
@@ -98,8 +98,8 @@ val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
 test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
 
 
-train_loss = []
-val_loss = []
+train_losses = []
+val_losses = []
 
 n_epochs = 150
 for epoch in range(n_epochs):
@@ -129,7 +129,7 @@ for epoch in range(n_epochs):
 
     
     avg_train_loss = running_loss/len(train_loader)
-    train_loss.append(avg_train_loss)
+    train_losses.append(avg_train_loss)
     print(f"Epoch {epoch+1}/{n_epochs}, Loss: {avg_train_loss:.4f}")
 
 
@@ -149,7 +149,7 @@ for epoch in range(n_epochs):
             val_loss += loss.item()
 
     avg_val_loss = val_loss/len(val_loader)
-    val_loss.append(avg_val_loss)
+    val_losses.append(avg_val_loss)
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss:.4f}')
 
 # Test phase (after all epochs)

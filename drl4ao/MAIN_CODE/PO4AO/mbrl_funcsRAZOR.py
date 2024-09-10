@@ -248,11 +248,9 @@ def make_diverse_dataset(env, size, num_scale=6):
     for i in range(num_scale):
         for j in range(size):
 
-            print(f'scale factor:{scaling[i]}')
-
             command = np.random.randn(*env.dm.coefs.shape) * scaling[i]
 
-            env.dm.coefs = command
+            env.dm.coefs = command.copy()
 
             env.tel*env.dm*env.wfs
 
@@ -262,6 +260,7 @@ def make_diverse_dataset(env, size, num_scale=6):
             sample_counter += 1
 
             if j+1 == size:
+                print(f'scale factor:{scaling[i]}')
                 print(f"Generated {sample_counter} samples")
 
     return dataset
