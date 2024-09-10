@@ -223,7 +223,17 @@ def train_policy(opt, policy, dynamics, replay,device,n_history, max_ts, batch_s
 
 ####################### Phase Reconstruction ############################
 
-def get_phase_dataset(env, size):
+def OPD_model(dm_cmd, modes, res, xvalid, yvalid):
+
+    vec_cmd = dm_cmd[:,:,xvalid, yvalid]
+    dm_opd = torch.matmul(vec_cmd,modes.unsqueeze(0).unsqueeze(0).transpose(-1,-2)).squeeze(0)
+
+    dm_opd = torch.reshape(dm_opd, (-1,res,res)).unsqueeze(1)
+
+    return dm_opd
+
+
+def get_OL_phase_dataset(env, size):
     """Creates a pandas DataFrame with wavefront sensor measurements
     and corresponding mirror shapes."""
 
@@ -238,14 +248,54 @@ def get_phase_dataset(env, size):
 
     for i in range(size):
         env.atm.generateNewPhaseScreen(seeds[i])
-
         env.tel*env.wfs
 
         dataset.loc[i] = {'wfs': np.array(env.wfs.cam.frame.copy()), 'dm': np.array(env.OPD_on_dm())}
         true_phase[:,:,i] = env.tel.OPD
 
         if i % 100 == 0:
-            print(f"Generated {i} samples")
+            print(f"Generated {i} open loop samples")
+
+
+    return true_phase, dataset
+
+def get_CL_phase_dataset(env, size, reconstructor):
+    """Creates a pandas DataFrame with wavefront sensor measurements
+    and corresponding mirror shapes, using the closed loop system."""
+
+    recontructor.eval()
+
+    # Create random OPD maps
+
+    tel_res = env.dm.resolution
+
+    true_phase = np.zeros((tel_res,tel_res,size))
+
+    dataset = pd.DataFrame(columns=['wfs', 'dm'])
+
+    seeds = np.random.randint(1, 10000, size=size)
+
+    for i in range(size):
+        env.atm.generateNewPhaseScreen(seeds[i])
+        env.tel*env.wfs
+
+        obs = torch.tensor(env.wfs.cam.frame).clone().detach().float().unsqueeze(0).unsqueeze(0)
+
+        with torch.no_grad(): 
+            action = reconstructor(obs).squeeze(0).squeeze(0) #env.integrator()
+
+        pred_OPD = OPD_model(action, env.dm.modes, env.dm.resolution, env.xvalid, env.yvalid)
+
+        residual_phase = env.tel.OPD.copy() - pred_OPD.squeeze().numpy()
+
+        env.tel.OPD = residual_phase
+        env.tel*env.wfs
+
+        dataset.loc[i] = {'wfs': np.array(env.wfs.cam.frame.copy()), 'dm': np.array(env.OPD_on_dm())}
+        true_phase[:,:,i] = env.tel.OPD
+
+        if i % 100 == 0:
+            print(f"Generated {i} closed loop samples")
 
     return true_phase, dataset
 

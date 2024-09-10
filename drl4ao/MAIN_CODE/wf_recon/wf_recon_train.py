@@ -14,7 +14,7 @@ from PO4AO.util_simple import read_yaml_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset, train_reconstructor
+from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset, OPD_model
 from PO4AO.conv_models_simple import Reconstructor, ImageDataset
 from Plots.plots import save_plots
 from types import SimpleNamespace
@@ -44,14 +44,6 @@ modes = torch.tensor(env.dm.modes.copy()).to(device).float()
 res = env.dm.resolution
 # tel_mask = torch.tensor(env.tel.pupil.copy()).to(device)
 
-def OPD_model(dm_cmd, modes, res):
-
-    vec_cmd = dm_cmd[:,:,env.xvalid, env.yvalid]
-    dm_opd = torch.matmul(vec_cmd,modes.unsqueeze(0).unsqueeze(0).transpose(-1,-2)).squeeze(0)
-
-    dm_opd = torch.reshape(dm_opd, (-1,res,res)).unsqueeze(1)
-
-    return dm_opd
 
 # %%
 
@@ -83,7 +75,7 @@ for epoch in range(n_epochs):
         outputs = reconstructor(inputs)
 
         # Get the OPD from the model
-        dm_OPD = OPD_model(outputs, modes, res)
+        dm_OPD = OPD_model(outputs, modes, res, env.xvalid, env.yvalid)
 
         loss = criterion(dm_OPD, targets)
         
