@@ -238,12 +238,12 @@ def make_diverse_dataset(env, size, num_scale=6):
     and corresponding mirror shapes, generated from normally distributed
     dm coefficients."""
 
-    dataset = pd.DataFrame(columns=['wfs', 'dm'])
+    dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
+    wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
 
+    frame = 0
 
-    sample_counter = 0
-
-    scaling = np.logspace(-9, -6, num_scale)
+    scaling = np.linspace(1e-9, 5e-7, num_scale)
 
     for i in range(num_scale):
         for j in range(size):
@@ -252,18 +252,21 @@ def make_diverse_dataset(env, size, num_scale=6):
 
             env.dm.coefs = command.copy()
 
-            env.tel*env.dm*env.wfs
+            print(np.max(np.abs(env.dm.coefs.copy())))
 
-            dataset.loc[i*j + j] = {'wfs': env.wfs.cam.frame.copy(),\
-                                     'dm': command}
+            env.tel*env.dm
+            env.tel*env.wfs
 
-            sample_counter += 1
+            wfs_frames[frame] = np.float32(env.wfs.cam.frame.copy())
+            dm_commands[frame] = np.float32(command.copy())
+
+            frame += 1
 
             if j+1 == size:
                 print(f'scale factor:{scaling[i]}')
-                print(f"Generated {sample_counter} samples")
+                print(f"Generated {frame} samples")
 
-    return dataset
+    return wfs_frames, dm_commands
 
 
 

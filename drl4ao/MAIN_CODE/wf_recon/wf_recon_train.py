@@ -27,31 +27,55 @@ except:
     args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 
 savedir = os.path.dirname(__file__)
-#%%
+
 env = get_env(args)
 #%%
 
 # Generate the dataset of wfs images and phase maps
-dataset = make_diverse_dataset(env, size=10, num_scale=20)
+env.tel.resetOPD()
+env.tel*env.dm*env.wfs
 
-dataset.to_pickle(savedir+'/diverse_phases_test.pkl')
+plt.imshow(env.tel.OPD)
+plt.show()
+plt.imshow(env.dm.OPD)
+plt.show()
+plt.imshow(env.wfs.cam.frame)
 
+# %%
+
+wfsf, dmc = make_diverse_dataset(env, size=2000, num_scale=10)
+
+# Save the dataset
+np.save(savedir+'/wfs_frames', wfsf)
+np.save(savedir+'/dm_cmds', dmc)
+
+#%%
+#CHECK DATA FROM THE DATASET
+# print(len(wfsf), len(dmc))
+
+# frame = 21
+
+# plt.imshow(wfsf[frame])
+# plt.show()
+
+# plt.imshow(env.vec_to_img(torch.tensor(dmc[frame]).float()).detach().numpy(),\
+#                     vmin=-1e-6, vmax=1e-6)
+# plt.colorbar()
+# plt.show()
 
 # %%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # %%
 
-dataset_raw = pd.read_pickle(savedir+'/diverse_phases_test.pkl').reset_index(drop=True)
-
-X = dataset_raw['wfs']
-y = dataset_raw['dm']
+X = np.load(savedir+'/wfs_frames.npy')
+y = np.load(savedir+'/dm_cmds.npy')
 
 # Set the random seed for reproducibility
 np.random.seed(42)
 
 # Shuffle the data indices
-indices = np.arange(len(dataset_raw))
+indices = np.arange(len(X))
 np.random.shuffle(indices)
 
 # Define the split ratios
@@ -60,8 +84,8 @@ val_ratio = 0.2
 test_ratio = 0.2
 
 # Calculate the split indices
-train_size = int(train_ratio * len(dataset_raw))
-val_size = int(val_ratio * len(dataset_raw))
+train_size = int(train_ratio * len(X))
+val_size = int(val_ratio * len(X))
 
 # Get the corresponding indices for each set
 train_indices = indices[:train_size]
