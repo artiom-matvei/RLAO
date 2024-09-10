@@ -21,7 +21,10 @@ from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
-args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+try:
+    args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+except:
+    args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 
 savedir = os.path.dirname(__file__)
 #%%
