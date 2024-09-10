@@ -10,12 +10,12 @@ import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from PO4AO.util_simple import read_yaml_file #TorchWrapper, 
+from PO4AO.util_simple import read_yaml_file
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset, train_reconstructor
-from PO4AO.conv_models_simple import Reconstructor, ImageDataset
+from PO4AO.mbrl_funcsRAZOR import get_env
+from PO4AO.conv_models_simple import Reconstructor
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
@@ -26,14 +26,6 @@ savedir = os.path.dirname(__file__)
 #%%
 env = get_env(args)
 #%%
-
-# Generate the dataset of wfs images and phase maps
-_, dataset = get_phase_dataset(env, 4096)
-
-dataset.to_pickle(savedir+'/phase_dataset_big.pkl')
-
-
-# %%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 modes = torch.tensor(env.dm.modes.copy()).to(device).float()
@@ -50,51 +42,6 @@ def OPD_model(dm_cmd, modes, res):
     return dm_opd
 
 # %%
-
-dataset_raw = pd.read_pickle(savedir+'/phase_dataset_big.pkl').reset_index(drop=True)
-ds_torch = ImageDataset(dataset_raw, 'wfs', 'dm')
-
-# %%
-
-reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.001)
-criterion = nn.SmoothL1Loss()
-
-reconstructor.train()
-reconstructor.to(device)
-
-dataloader = DataLoader(ds_torch, batch_size=32, shuffle=True)
-
-
-n_epochs = 100
-for epoch in range(n_epochs):
-    running_loss = 0.0
-    for inputs, targets in dataloader:
-        # Zero the parameter gradients
-        optimizer.zero_grad()
-        inputs = inputs.to(device)
-        targets = targets.to(device)
-        
-        # Forward pass
-        outputs = reconstructor(inputs)
-
-        # Get the OPD from the model
-        dm_OPD = OPD_model(outputs, modes, res)
-
-        loss = criterion(dm_OPD, targets)
-        
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-    print(f"Epoch {epoch+1}/{n_epochs}, Loss: {running_loss/len(dataloader)}")
-
-
-
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor.pt')
-# %%
 LE_PSFs = []
 SE_PSFs = []
 SRs = []
@@ -107,38 +54,14 @@ network = Reconstructor(1,1,11, env.xvalid, env.yvalid)
 network.load_state_dict(torch.load(savedir+'/reconstructor.pt', map_location=torch.device('cpu')))
 network.eval()
 
-# %%
-
-fig, ax = plt.subplots(2,1, figsize=(5,10))
-
-env.atm.generateNewPhaseScreen(31)
-env.tel*env.wfs
-
-obs = torch.tensor(env.wfs.cam.frame).float().unsqueeze(0).unsqueeze(0)
-
-cax1 = ax[0].imshow(env.OPD_on_dm())
-cax2 = ax[1].imshow(OPD_model(network(obs), modes, res).squeeze(0).squeeze(0).detach().numpy())
-
-ax[0].axis('off')
-ax[1].axis('off')
-
-
-ax[0].set_title('Random Phase', size=15)
-ax[1].set_title('Reconstructed Phase', size=15)
-
-
-plt.tight_layout()
-
-plt.show()
-
 #%%
 for i in range(args.nLoop):
     a=time.time()
     # print(env.gainCL)
-    obs = torch.tensor(obs).float().unsqueeze(0).unsqueeze(0)
+    obs = torch.tensor(obs).clone().detach.float().unsqueeze(0).unsqueeze(0)
     with torch.no_grad(): 
         action = - env.gainCL * network(obs).squeeze(0).squeeze(0) #env.integrator()
-    obs, reward,strehl, done, info = env.step_wfs(i,action)  
+    obs, reward,strehl, done, info = env.step_wfs(i,action*1e-6)  
     accu_reward+= reward
 
     b= time.time()
@@ -160,4 +83,30 @@ print(SRs)
 print(rewards)
 print("Saving Data")
 save_plots(savedir,SRs,rewards,env.LE_PSF) #savedir,evals,reward_sums,env.LE_PS
+# %%
+
+fig, ax = plt.subplots(1,2, figsize=(10,5))
+
+env.atm.generateNewPhaseScreen(31)
+env.tel*env.wfs
+
+obs = torch.tensor(env.wfs.cam.frame).float().unsqueeze(0).unsqueeze(0)
+
+cax1 = ax[0].imshow(env.OPD_on_dm() * env.tel.pupil)
+cax2 = ax[1].imshow(OPD_model(network(obs), modes, res).squeeze(0).squeeze(0).detach().numpy()*env.tel.pupil)
+
+ax[0].axis('off')
+ax[1].axis('off')
+
+
+ax[0].set_title('Random Phase', size=15)
+ax[1].set_title('Reconstructed Phase', size=15)
+
+plt.colorbar(cax1, ax=ax[0])
+plt.colorbar(cax2, ax=ax[1])
+
+plt.tight_layout()
+
+plt.show()
+
 # %%

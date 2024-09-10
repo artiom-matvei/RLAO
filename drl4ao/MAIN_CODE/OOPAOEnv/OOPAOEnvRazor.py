@@ -499,7 +499,7 @@ class OOPAO(gym.Env):
         return obs, -1 * np.linalg.norm(obs), strehl,bool(done), info
     
     def step_wfs(self, i, action):
-        action = self.img_to_vec(action)*1e-6
+        action = self.img_to_vec(action)
 
         # update phase screens => overwrite tel.OPD and consequently tel.src.phase
         self.atm.update()
