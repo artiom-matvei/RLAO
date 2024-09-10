@@ -62,7 +62,7 @@ reconstructor.to(device)
 dataloader = DataLoader(ds_torch, batch_size=32, shuffle=True)
 
 
-n_epochs = 5000
+n_epochs = 1000
 for epoch in range(n_epochs):
     running_loss = 0.0
     for inputs, targets in dataloader:
