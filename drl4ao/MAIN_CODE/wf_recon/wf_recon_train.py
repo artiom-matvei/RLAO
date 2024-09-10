@@ -32,9 +32,9 @@ env = get_env(args)
 #%%
 
 # Generate the dataset of wfs images and phase maps
-_, dataset = get_phase_dataset(env, 4096)
+# _, dataset = get_phase_dataset(env, 4096)
 
-dataset.to_pickle(savedir+'/phase_dataset_big.pkl')
+# dataset.to_pickle(savedir+'/phase_dataset_big.pkl')
 
 
 # %%
@@ -70,7 +70,7 @@ reconstructor.to(device)
 dataloader = DataLoader(ds_torch, batch_size=32, shuffle=True)
 
 
-n_epochs = 100
+n_epochs = 5000
 for epoch in range(n_epochs):
     running_loss = 0.0
     for inputs, targets in dataloader:
@@ -97,4 +97,4 @@ for epoch in range(n_epochs):
 
 
 
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor.pt')
+torch.save(reconstructor.state_dict(), savedir+'/reconstructor_long.pt')
