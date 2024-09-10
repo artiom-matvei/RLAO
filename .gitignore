@@ -8,6 +8,7 @@ logs/
 data_cl/
 env_var.sh
 # Job files
+*.sh
 *.out
 # Byte-compiled / optimized / DLL files
 __pycache__/
