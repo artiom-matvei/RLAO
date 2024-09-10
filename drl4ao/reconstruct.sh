@@ -12,4 +12,4 @@
 cd MAIN_CODE
 
 source $HOME/projects/def-lplevass/parker09/drl4ao_env/bin/activate
-python $HOME/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/wf_reconstruct.py
+python $HOME/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/wf_recon_train.py
