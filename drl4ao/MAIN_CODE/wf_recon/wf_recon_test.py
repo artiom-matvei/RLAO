@@ -10,14 +10,15 @@ import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from PO4AO.util_simple import read_yaml_file
+from PO4AO.util_simple import read_yaml_file, append_to_pickle_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset
 from PO4AO.conv_models_simple import Reconstructor
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
+plt.rcParams['image.cmap'] = 'inferno' 
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
 args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))

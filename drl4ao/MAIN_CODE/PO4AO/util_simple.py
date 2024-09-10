@@ -3,12 +3,27 @@ import torch
 import numpy as np 
 import gym
 import yaml
+import pickle
 
 
 def read_yaml_file(file_path):
     with open(file_path, 'r') as file:
         conf = yaml.safe_load(file)
     return conf
+
+def append_to_pickle_file(filename, data):
+    """
+    Append a numpy array (or any Python object) to a pickle file on disk.
+
+    Parameters:
+    filename : str
+        The name of the file to which data will be appended.
+    data : Python object (e.g., numpy array)
+        The data to append to the file.
+    """
+    # Open the file in append binary mode; if the file doesn't exist, it will be created
+    with open(filename, 'ab') as f:
+        pickle.dump(data, f)
 
 
 class TimeDelayEnv(gym.Wrapper):

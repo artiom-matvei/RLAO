@@ -3,6 +3,8 @@ logs/
 #Saved torch data
 *.pt
 
+.DS_Store
+
 data_cl/
 env_var.sh
 # Job files

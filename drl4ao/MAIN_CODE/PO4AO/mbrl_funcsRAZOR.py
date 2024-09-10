@@ -233,6 +233,41 @@ def OPD_model(dm_cmd, modes, res, xvalid, yvalid):
     return dm_opd
 
 
+def make_diverse_dataset(env, size, num_scale=6):
+    """Creates a pandas DataFrame with wavefront sensor measurements
+    and corresponding mirror shapes, generated from normally distributed
+    dm coefficients."""
+
+    dataset = pd.DataFrame(columns=['wfs', 'dm'])
+
+
+    sample_counter = 0
+
+    scaling = np.logspace(-9, -6, num_scale)
+
+    for i in range(num_scale):
+        for j in range(size):
+
+            print(f'scale factor:{scaling[i]}')
+
+            command = np.random.randn(*env.dm.coefs.shape) * scaling[i]
+
+            env.dm.coefs = command
+
+            env.tel*env.dm*env.wfs
+
+            dataset.loc[i*j + j] = {'wfs': env.wfs.cam.frame.copy(),\
+                                     'dm': command}
+
+            sample_counter += 1
+
+            if j+1 == size:
+                print(f"Generated {sample_counter} samples")
+
+    return dataset
+
+
+
 def get_OL_phase_dataset(env, size):
     """Creates a pandas DataFrame with wavefront sensor measurements
     and corresponding mirror shapes."""

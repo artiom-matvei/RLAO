@@ -609,8 +609,12 @@ class OOPAO(gym.Env):
 
     def img_to_vec(self, action):
         # assert len(action.shape) == 2
+        if len(action.shape) == 4:
+            action_out = action[:,:,self.xvalid, self.yvalid]
+        else:
+            action_out = action[self.xvalid, self.yvalid]
         
-        return action[self.xvalid, self.yvalid]
+        return action_out
     
 
     def change_mag(self, mag):
