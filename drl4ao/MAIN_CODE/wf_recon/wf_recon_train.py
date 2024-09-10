@@ -35,11 +35,11 @@ env = get_env(args)
 env.tel.resetOPD()
 env.tel*env.dm*env.wfs
 
-plt.imshow(env.tel.OPD)
-plt.show()
-plt.imshow(env.dm.OPD)
-plt.show()
-plt.imshow(env.wfs.cam.frame)
+# plt.imshow(env.tel.OPD)
+# plt.show()
+# plt.imshow(env.dm.OPD)
+# plt.show()
+# plt.imshow(env.wfs.cam.frame)
 
 # %%
 
@@ -197,8 +197,8 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss:.4f}")
 
 
-np.save(savedir+'/train_loss', train_loss)
-np.save(savedir+'/val_loss', val_loss)
+np.save(savedir+'/train_loss', train_losses)
+np.save(savedir+'/val_loss', val_losses)
 torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd.pt')
 
 
