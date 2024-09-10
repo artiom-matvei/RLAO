@@ -5,7 +5,7 @@
 #SBATCH --mem=40G                        # memory per node
 #SBATCH --time=00-04:59         # time (DD-HH:MM)
 #SBATCH --account=def-lplevass
-#SBATCH --job-name=train_recon_5kiter
+#SBATCH --job-name=train_recon_randn_cmd
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=parker.levesque@gmail.com
 

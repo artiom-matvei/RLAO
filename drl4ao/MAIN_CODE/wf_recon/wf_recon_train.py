@@ -14,7 +14,7 @@ from PO4AO.util_simple import read_yaml_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset, OPD_model
+from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset
 from PO4AO.conv_models_simple import Reconstructor, ImageDataset
 from Plots.plots import save_plots
 from types import SimpleNamespace
@@ -32,18 +32,13 @@ env = get_env(args)
 #%%
 
 # Generate the dataset of wfs images and phase maps
-dataset = make_diverse_dataset(env, size=)
+dataset = make_diverse_dataset(env, size=1000, n_scale=20)
 
 dataset.to_pickle(savedir+'/diverse_phases_test.pkl')
 
 
 # %%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-modes = torch.tensor(env.dm.modes.copy()).to(device).float()
-res = env.dm.resolution
-# tel_mask = torch.tensor(env.tel.pupil.copy()).to(device)
-
 
 # %%
 
@@ -103,6 +98,9 @@ val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
 test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
 
 
+train_loss = []
+val_loss = []
+
 n_epochs = 150
 for epoch in range(n_epochs):
 
@@ -131,6 +129,7 @@ for epoch in range(n_epochs):
 
     
     avg_train_loss = running_loss/len(train_loader)
+    train_loss.append(avg_train_loss)
     print(f"Epoch {epoch+1}/{n_epochs}, Loss: {avg_train_loss:.4f}")
 
 
@@ -150,10 +149,11 @@ for epoch in range(n_epochs):
             val_loss += loss.item()
 
     avg_val_loss = val_loss/len(val_loader)
+    val_loss.append(avg_val_loss)
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss:.4f}')
 
 # Test phase (after all epochs)
-model.eval()  # Set the model to evaluation mode
+reconstructor.eval()  # Set the model to evaluation mode
 test_loss = 0.0
 with torch.no_grad():
     for inputs, targets in test_loader:
@@ -173,7 +173,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss:.4f}")
 
 
-
+np.save(savedir+'/train_loss', train_loss)
+np.save(savedir+'/val_loss', val_loss)
 torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd.pt')
+
 
 # %%
