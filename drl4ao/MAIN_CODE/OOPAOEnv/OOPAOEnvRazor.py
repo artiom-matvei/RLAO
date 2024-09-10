@@ -76,13 +76,11 @@ class OOPAO(gym.Env):
         obs = -np.matmul(self.reconstructor,self.get_slopes())
         obs = self.vec_to_img(obs)*1e6
         return obs
-    
 
     def reset_soft_wfs(self):
         self.action_buffer = []
         obs = self.wfs.cam.frame.copy()
         return obs
-
     # ---------------- Simulation initialisation functions ---------------------
     def set_params_file(self,param_file,oopao_path):
         if param_file != self.param_file:
@@ -497,6 +495,43 @@ class OOPAO(gym.Env):
 
 
         return obs, -1 * np.linalg.norm(obs), strehl,bool(done), info
+
+
+    def step_wfs(self, i, action):
+        action = self.img_to_vec(action)*1e-6
+
+        # update phase screens => overwrite tel.OPD and consequently tel.src.phase
+        self.atm.update()
+        # save phase variance
+        self.total[i]=np.std(self.tel.OPD[np.where(self.tel.pupil>0)])*1e9
+        # save turbulent phase
+        turbPhase = self.tel.src.phase
+        # propagate to the WFS with the CL commands applied
+        self.tel*self.dm*self.wfs
+
+        # Integrator
+        # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
+        self.dm.coefs += action 
+
+        # store the slopes after computing the commands => 2 frames delay
+        self.wfsSignal=self.wfs.cam.frame.copy()
+
+        obs = self.wfsSignal 
+
+        self.residual[i]=np.std(self.tel.OPD[np.where(self.tel.pupil>0)])*1e9
+        self.OPD=self.tel.OPD[np.where(self.tel.pupil>0)]
+
+        # Save Strehl ratio to calculate Episode Average
+        strehl = self.get_strehl()
+        self.SR.append(strehl)
+
+        # Extra
+        info = {"strehl":strehl}
+        done = 0
+
+
+        return obs, -1 * np.linalg.norm(obs), strehl,bool(done), info
+
     
     def step_wfs(self, i, action):
         action = self.img_to_vec(action)

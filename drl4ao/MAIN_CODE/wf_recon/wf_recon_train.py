@@ -16,6 +16,7 @@ import time
 import numpy as np
 from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset, train_reconstructor
 from PO4AO.conv_models_simple import Reconstructor, ImageDataset
+from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
