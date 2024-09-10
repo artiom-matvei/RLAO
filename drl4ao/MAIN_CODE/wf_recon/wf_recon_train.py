@@ -14,7 +14,7 @@ from PO4AO.util_simple import read_yaml_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset, OPD_model
+from PO4AO.mbrl_funcsRAZOR import get_env, get_OL_phase_dataset, OPD_model
 from PO4AO.conv_models_simple import Reconstructor, ImageDataset
 from Plots.plots import save_plots
 from types import SimpleNamespace
