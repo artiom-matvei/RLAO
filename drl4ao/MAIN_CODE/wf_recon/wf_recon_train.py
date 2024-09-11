@@ -129,7 +129,7 @@ train_losses = []
 val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'models/best_model.pt'  # Path to save the best model
+save_path = savedir+'/models/best_model_OL.pt'  # Path to save the best model
 
 n_epochs = args.iters
 for epoch in range(n_epochs):
@@ -217,8 +217,8 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/train_loss_asinh_OL', train_losses)
-np.save(savedir+'/val_loss_asinh_OL', val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_asinh_OL.pt')
+np.save(savedir+'/losses/train_loss_asinh_OL', train_losses)
+np.save(savedir+'/losses/val_loss_asinh_OL', val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_model_OL.pt')
 
 # %%
