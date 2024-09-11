@@ -115,7 +115,12 @@ D_val = ImageDataset(X_val, y_val)
 # %%
 
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001, weight_decay=1e-4)
+
+# EMA of model parameters
+ema_reconstructor = torch.optim.swa_utils.AveragedModel(model, \
+    multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
+
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
 criterion = nn.MSELoss()
 
 reconstructor.to(device)
@@ -127,9 +132,10 @@ test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
 
 train_losses = []
 val_losses = []
+ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/best_model_OL.pt'  # Path to save the best model
+save_path = savedir+'/models/best_models_ema_OL.pt'  # Path to save the best model
 
 n_epochs = args.iters
 for epoch in range(n_epochs):
@@ -152,6 +158,7 @@ for epoch in range(n_epochs):
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
+        ema_reconstructor.update_parameters(reconstructor)
 
         running_loss += loss.item()
 
@@ -164,6 +171,7 @@ for epoch in range(n_epochs):
     # Validation phase
     reconstructor.eval()
     val_loss = 0.0
+    ema_val_loss = 0.0
     with torch.no_grad():
         for inputs, targets in val_loader:
             inputs = inputs.to(device)
@@ -171,13 +179,22 @@ for epoch in range(n_epochs):
 
             #forward pass
             outputs = env.img_to_vec(reconstructor(inputs))
+            ema_outputs = env.img_to_vec(ema_reconstructor(inputs))
 
 
             loss = criterion(outputs, targets)
             val_loss += loss.item()
 
+            ema_loss = criterion(ema_outputs, targets)
+            ema_val_loss += ema_loss.item()
+
     avg_val_loss = val_loss/len(val_loader)
     val_losses.append(avg_val_loss)
+
+    avg_ema_val_loss = ema_val_loss/len(val_loader)
+    ema_val_losses.append(avg_ema_val_loss)
+
+
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss  # Update the best validation loss
@@ -187,6 +204,7 @@ for epoch in range(n_epochs):
         torch.save({
             'epoch': epoch + 1,
             'model_state_dict': model.state_dict(),
+            'ema_model_state_dict': ema_model.module.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'val_loss': best_val_loss,
         }, save_path)
@@ -217,8 +235,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_asinh_OL', train_losses)
-np.save(savedir+'/losses/val_loss_asinh_OL', val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_model_OL.pt')
+np.save(savedir+'/losses/train_loss_ema', train_losses)
+np.save(savedir+'/losses/val_loss_ema', val_losses)
+np.save(savedir+'/losses/ema_val_loss_ema', ema_val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_ema.pt')
 
 # %%
