@@ -43,7 +43,7 @@ env.tel*env.dm*env.wfs
 
 # %%
 
-wfsf, dmc = make_diverse_dataset(env, size=2000, num_scale=10)
+wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10)
 
 # Save the dataset
 np.save(savedir+'/wfs_frames', wfsf)
@@ -68,8 +68,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # %%
 
-X = np.load(savedir+'/wfs_frames.npy')
-y = np.load(savedir+'/dm_cmds.npy')
+# X = np.load(savedir+'/wfs_frames.npy')
+# y = np.load(savedir+'/dm_cmds.npy')
+X = wfsf
+y = dmc
 
 # Set the random seed for reproducibility
 np.random.seed(42)
@@ -93,8 +95,8 @@ val_indices = indices[train_size:train_size + val_size]
 test_indices = indices[train_size + val_size:]
 
 # Split the data
-X_train, X_val, X_test = X.iloc[train_indices], X.iloc[val_indices], X.iloc[test_indices]
-y_train, y_val, y_test = y.iloc[train_indices], y.iloc[val_indices], y.iloc[test_indices]
+X_train, X_val, X_test = X[train_indices], X[val_indices], X[test_indices]
+y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
 
 df_train = pd.DataFrame({'wfs': X_train, 'dm': y_train})
 df_test = pd.DataFrame({'wfs': X_test, 'dm': y_test})
@@ -174,6 +176,10 @@ for epoch in range(n_epochs):
 
     avg_val_loss = val_loss/len(val_loader)
     val_losses.append(avg_val_loss)
+
+    with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
+        f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss:.4f}\n")
+
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss:.4f}')
 
 # Test phase (after all epochs)
