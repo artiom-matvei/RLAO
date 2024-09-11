@@ -75,7 +75,7 @@ y = np.load(savedir+'/dm_cmds.npy')
 # y = dmc
 
 # Set the random seed for reproducibility
-np.random.seed(24)
+np.random.seed(243)
 
 # Shuffle the data indices
 indices = np.arange(len(X))
@@ -111,7 +111,7 @@ D_val = ImageDataset(X_val, y_val)
 # %%
 
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.00005)
 criterion = nn.SmoothL1Loss()
 
 reconstructor.to(device)
@@ -124,7 +124,7 @@ test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
 train_losses = []
 val_losses = []
 
-n_epochs = 150
+n_epochs = 500
 for epoch in range(n_epochs):
 
     #Training phase
@@ -197,12 +197,11 @@ with torch.no_grad():
 
 # Calculate average test loss
 avg_test_loss = test_loss / len(test_loader)
-print(f"Test Loss: {avg_test_loss:.4f}")
+print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/train_loss', train_losses)
-np.save(savedir+'/val_loss', val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd.pt')
-
+np.save(savedir+'/train_loss_500ep', train_losses)
+np.save(savedir+'/val_loss_500ep', val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_500ep.pt')
 
 # %%

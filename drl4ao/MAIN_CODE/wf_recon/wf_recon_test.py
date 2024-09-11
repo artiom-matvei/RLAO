@@ -15,10 +15,21 @@ from PO4AO.util_simple import read_yaml_file, append_to_pickle_file #TorchWrappe
 import time
 import numpy as np
 from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset
-from PO4AO.conv_models_simple import Reconstructor
+from PO4AO.conv_models_simple import Reconstructor, ImageDataset
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
-plt.rcParams['image.cmap'] = 'inferno' 
+# Customize rcParams for specific adjustments
+plt.rcParams['image.cmap'] = 'inferno'      # Set colormap to inferno for imshow
+plt.rcParams['figure.facecolor'] = 'black'  # Set figure background to black
+plt.rcParams['axes.facecolor'] = 'black'    # Set axes background to black
+plt.rcParams['savefig.facecolor'] = 'black' # Set saved figures' background to black
+plt.rcParams['axes.grid'] = False           # Disable grid for a cleaner look on dark background
+plt.rcParams['xtick.color'] = 'white'
+plt.rcParams['ytick.color'] = 'white'
+plt.rcParams['axes.labelcolor'] = 'white'
+plt.rcParams['axes.edgecolor'] = 'white'
+plt.rcParams['legend.facecolor'] = 'gray'
+
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
 try:
@@ -47,8 +58,8 @@ def OPD_model(dm_cmd, modes, res):
 
 def load_model(model_path):
     """Loads the trained model from a state dict."""
-    model = Reconstructor()  # Replace with your model class
-    model.load_state_dict(torch.load(model_path))
+    model = Reconstructor(1,1,11, env.xvalid,env.yvalid)  # Replace with your model class
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()  # Set the model to evaluation mode
     return model
 
@@ -56,27 +67,114 @@ def load_model(model_path):
 
 # %%
 # Make some fresh data
-wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
-                        min_scale=1e-9, max_scale=1e-6)
+# wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
+#                         min_scale=1e-9, max_scale=1e-6)
 
+X = np.load(savedir+'/wfs_frames.npy', mmap_mode='r')
+y = np.load(savedir+'/dm_cmds.npy', mmap_mode='r')
+
+np.random.seed(24)
+
+# Shuffle the data indices
+indices = np.arange(10000)
+np.random.shuffle(indices)
+
+# Define the split ratios
+train_ratio = 0.6
+val_ratio = 0.2
+test_ratio = 0.2
+
+# Calculate the split indices
+train_size = int(train_ratio * 10000)
+val_size = int(val_ratio * 10000)
+
+# Get the corresponding indices for each set
+train_indices = indices[:train_size]
+val_indices = indices[train_size:train_size + val_size]
+test_indices = indices[train_size + val_size:]
+
+# Split the data
+X_train, X_val, X_test = X[train_indices], X[val_indices], X[test_indices]
+y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
+
+# Now you have:
+# X_train, y_train: training set
+# X_val, y_val: validation set
+# X_test, y_test: test set
+# D_train = ImageDataset(X_train, y_train)
+# D_test = ImageDataset(X_test, y_test)
+D_val = ImageDataset(X_val, y_val)
+
+
+# %%
+
+reconstructor = load_model(savedir+'/reconstructor_cmd.pt')
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.00001)
+criterion = nn.SmoothL1Loss()
+
+reconstructor.to(device)
+
+# train_loader = DataLoader(D_train, batch_size=32, shuffle=True)
+val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
+# test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
+
+
+train_losses = []
+val_losses = []
+
+n_epochs = 1
+for epoch in range(n_epochs):
+    reconstructor.eval()
+    val_loss = 0.0
+    with torch.no_grad():
+        for inputs, targets in val_loader:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+
+            #forward pass
+            outputs = env.img_to_vec(reconstructor(inputs))
+
+
+            loss = criterion(outputs, targets)
+            val_loss += loss.item()
+
+    avg_val_loss = val_loss/len(val_loader)
+    val_losses.append(avg_val_loss)
+
+    # with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
+    #     f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
+
+    print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
+
+
+
+#%% 
 # Load the model
 network = load_model(savedir+'/reconstructor_cmd.pt')
 
 # Make predictions
-obs = torch.tensor(wfsf).float().unsqueeze(1).unsqueeze(1)
-pred = OPD_model(network(obs), modes, res)
+obs = torch.tensor(wfsf).float().unsqueeze(1)
+
+with torch.no_grad():
+    pred = network(obs)
+    pred_OPD = OPD_model(network(obs), modes, res)
+
 
 # Run ground truth commands through the model
-gt = OPD_model(torch.tensor(dmc).float().unsqueeze(0).unsqueeze(0), modes, res)
 
-# %%
+# Reshape commands into image
+cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
 
-fig, ax = plt.subplots(2,3, figsize=(15,5))
+gt_opd = OPD_model(torch.tensor(cmd_img).unsqueeze(1), modes, res)
+
+
+#%%
+fig, ax = plt.subplots(3,3, figsize=(10,10))
 
 for i in range(3):
     cax1 = ax[0,i].imshow(wfsf[i])
-    cax2 = ax[1,i].imshow(pred.squeeze(0).squeeze(0).detach().numpy()[i]*env.tel.pupil)
-    cax3 = ax[2,i].imshow(gt.squeeze(0).squeeze(0).detach().numpy()[i]*env.tel.pupil)
+    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-3e-6, vmax=3e-6)
+    cax3 = ax[2,i].imshow(cmd_img[i], vmin=-3e-6, vmax=3e-6)
 
 
     ax[0,i].axis('off')
@@ -89,10 +187,7 @@ for i in range(3):
     ax[2,i].set_title('Ground Truth Phase', size=15)
     
 
-plt.colorbar(cax1, ax=ax[0])
-plt.colorbar(cax2, ax=ax[1])
-
-plt.tight_layout()
+# plt.tight_layout()
 
 plt.show()
 

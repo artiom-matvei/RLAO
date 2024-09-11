@@ -157,11 +157,13 @@ class Reconstructor(nn.Module):
         # Final layer to adjust the output to exactly m x m
         self.final_conv = nn.Conv2d(256, output_channels, kernel_size=3, padding=1)
         self.final_pool = nn.AdaptiveAvgPool2d(output_size)  # Output size mxm
+        self.tanh       = nn.Tanh()
 
     def forward(self, x):
         x = self.downsampler(x)
         x = self.final_conv(x)
         x = self.final_pool(x)
+        x = self.tanh(x)
 
         # Mask out the invalid region
         x_out = torch.zeros_like(x)
@@ -171,10 +173,10 @@ class Reconstructor(nn.Module):
     
 
 class ImageDataset(Dataset):
-    def __init__(self, inputs, outputs, transform=None):
+    def __init__(self, inputs, outputs):
         self.inputs = inputs
         self.outputs = outputs
-        self.transform = transform
+
 
     def __len__(self):
         return len(self.inputs)
@@ -188,8 +190,7 @@ class ImageDataset(Dataset):
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
         target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
 
-        if self.transform:
-            input_image = self.transform(input_image)
-            target_image = self.transform(target_image)
+        intput_image = (input_image - input_image.mean()) / input_image.std()
+
 
         return input_image, target_image
