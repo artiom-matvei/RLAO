@@ -70,12 +70,16 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # %%
 
 X = np.load(savedir+'/wfs_frames.npy')
-y = np.load(savedir+'/dm_cmds.npy')
+y_raw = np.load(savedir+'/dm_cmds.npy')
+
+#Transform commands to regular scale
+
+y = np.arcsinh(y_raw / 1e-9)
 # X = wfsf
 # y = dmc
 
 # Set the random seed for reproducibility
-np.random.seed(243)
+np.random.seed(432)
 
 # Shuffle the data indices
 indices = np.arange(len(X))
@@ -111,8 +115,8 @@ D_val = ImageDataset(X_val, y_val)
 # %%
 
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.00005)
-criterion = nn.SmoothL1Loss()
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
+criterion = nn.MSELoss()
 
 reconstructor.to(device)
 
@@ -200,8 +204,8 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/train_loss_500ep', train_losses)
-np.save(savedir+'/val_loss_500ep', val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_500ep.pt')
+np.save(savedir+'/train_loss_asinh', train_losses)
+np.save(savedir+'/val_loss_asinh', val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_asinh.pt')
 
 # %%

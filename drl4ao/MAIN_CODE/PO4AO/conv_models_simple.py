@@ -146,24 +146,22 @@ class Reconstructor(nn.Module):
 
         self.downsampler = nn.Sequential(
             nn.Conv2d(input_channels, 64, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.ReLU(),
+            nn.LeakyReLU(),
             # Additional layers can be added if more downsampling is needed
         )
 
         # Final layer to adjust the output to exactly m x m
         self.final_conv = nn.Conv2d(256, output_channels, kernel_size=3, padding=1)
         self.final_pool = nn.AdaptiveAvgPool2d(output_size)  # Output size mxm
-        self.tanh       = nn.Tanh()
 
     def forward(self, x):
         x = self.downsampler(x)
         x = self.final_conv(x)
         x = self.final_pool(x)
-        x = self.tanh(x)
 
         # Mask out the invalid region
         x_out = torch.zeros_like(x)
