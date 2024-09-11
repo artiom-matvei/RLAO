@@ -21,7 +21,10 @@ import matplotlib.pyplot as plt
 plt.rcParams['image.cmap'] = 'inferno' 
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
-args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+try:
+    args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+except:
+    args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 
 savedir = os.path.dirname(__file__)
 #%%
@@ -42,66 +45,49 @@ def OPD_model(dm_cmd, modes, res):
 
     return dm_opd
 
+def load_model(model_path):
+    """Loads the trained model from a state dict."""
+    model = Reconstructor()  # Replace with your model class
+    model.load_state_dict(torch.load(model_path))
+    model.eval()  # Set the model to evaluation mode
+    return model
+
+
+
 # %%
-LE_PSFs = []
-SE_PSFs = []
-SRs = []
-rewards = []
-accu_reward = 0
+# Make some fresh data
+wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
+                        min_scale=1e-9, max_scale=1e-6)
 
-obs = torch.tensor(env.reset_soft_wfs()).float()
+# Load the model
+network = load_model(savedir+'/reconstructor_cmd.pt')
 
-network = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-network.load_state_dict(torch.load(savedir+'/reconstructor.pt', map_location=torch.device('cpu')))
-network.eval()
+# Make predictions
+obs = torch.tensor(wfsf).float().unsqueeze(1).unsqueeze(1)
+pred = OPD_model(network(obs), modes, res)
 
-#%%
-for i in range(args.nLoop):
-    a=time.time()
-    # print(env.gainCL)
-    obs = torch.tensor(obs).clone().detach.float().unsqueeze(0).unsqueeze(0)
-    with torch.no_grad(): 
-        action = - env.gainCL * network(obs).squeeze(0).squeeze(0) #env.integrator()
-    obs, reward,strehl, done, info = env.step_wfs(i,action*1e-6)  
-    accu_reward+= reward
+# Run ground truth commands through the model
+gt = OPD_model(torch.tensor(dmc).float().unsqueeze(0).unsqueeze(0), modes, res)
 
-    b= time.time()
-    print('Elapsed time: ' + str(b-a) +' s')
-    # LE_PSF, SE_PSF = env.render(i)
-    # LE_PSF, SE_PSF = env.render4plot(i)
-    # env.render4plot(i)
-
-    print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-    print("SR: " +str(strehl))
-    if (i+1) % 500 == 0:
-        sr = env.calculate_strehl_AVG()
-        SRs.append(sr)
-        rewards.append(accu_reward)
-        accu_reward = 0
-
-
-print(SRs)
-print(rewards)
-print("Saving Data")
-save_plots(savedir,SRs,rewards,env.LE_PSF) #savedir,evals,reward_sums,env.LE_PS
 # %%
 
-fig, ax = plt.subplots(1,2, figsize=(10,5))
+fig, ax = plt.subplots(2,3, figsize=(15,5))
 
-env.atm.generateNewPhaseScreen(31)
-env.tel*env.wfs
-
-obs = torch.tensor(env.wfs.cam.frame).float().unsqueeze(0).unsqueeze(0)
-
-cax1 = ax[0].imshow(env.OPD_on_dm() * env.tel.pupil)
-cax2 = ax[1].imshow(OPD_model(network(obs), modes, res).squeeze(0).squeeze(0).detach().numpy()*env.tel.pupil)
-
-ax[0].axis('off')
-ax[1].axis('off')
+for i in range(3):
+    cax1 = ax[0,i].imshow(wfsf[i])
+    cax2 = ax[1,i].imshow(pred.squeeze(0).squeeze(0).detach().numpy()[i]*env.tel.pupil)
+    cax3 = ax[2,i].imshow(gt.squeeze(0).squeeze(0).detach().numpy()[i]*env.tel.pupil)
 
 
-ax[0].set_title('Random Phase', size=15)
-ax[1].set_title('Reconstructed Phase', size=15)
+    ax[0,i].axis('off')
+    ax[1,i].axis('off')
+    ax[2,i].axis('off')
+
+
+    ax[0,i].set_title('Input WFS Image', size=15)
+    ax[1,i].set_title('Reconstructed Phase', size=15)
+    ax[2,i].set_title('Ground Truth Phase', size=15)
+    
 
 plt.colorbar(cax1, ax=ax[0])
 plt.colorbar(cax2, ax=ax[1])

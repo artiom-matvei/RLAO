@@ -19,6 +19,7 @@ from PO4AO.conv_models_simple import Reconstructor, ImageDataset
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
+plt.rcParams['image.cmap'] = 'inferno'
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
 try:
@@ -29,7 +30,6 @@ except:
 savedir = os.path.dirname(__file__)
 
 env = get_env(args)
-
 
 # Generate the dataset of wfs images and phase maps
 env.tel.resetOPD()
