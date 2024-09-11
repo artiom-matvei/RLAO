@@ -171,19 +171,18 @@ class Reconstructor(nn.Module):
     
 
 class ImageDataset(Dataset):
-    def __init__(self, dataframe, input_col, output_col, transform=None):
-        self.dataframe = dataframe
-        self.input_col = input_col
-        self.output_col = output_col
+    def __init__(self, inputs, outputs, transform=None):
+        self.inputs = inputs
+        self.outputs = outputs
         self.transform = transform
 
     def __len__(self):
-        return len(self.dataframe)
+        return len(self.inputs)
 
     def __getitem__(self, idx):
         # Load input image and target from the dataframe
-        input_image = self.dataframe.iloc[idx][self.input_col]
-        target_image = self.dataframe.iloc[idx][self.output_col]
+        input_image = self.inputs[idx]
+        target_image = self.outputs[idx]
         
         # Convert to float and apply any transformations (like normalization)
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)

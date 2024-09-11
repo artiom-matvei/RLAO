@@ -98,17 +98,13 @@ test_indices = indices[train_size + val_size:]
 X_train, X_val, X_test = X[train_indices], X[val_indices], X[test_indices]
 y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
 
-df_train = pd.DataFrame({'wfs': X_train, 'dm': y_train})
-df_test = pd.DataFrame({'wfs': X_test, 'dm': y_test})
-df_val = pd.DataFrame({'wfs': X_val, 'dm': y_val})
-
 # Now you have:
 # X_train, y_train: training set
 # X_val, y_val: validation set
 # X_test, y_test: test set
-D_train = ImageDataset(df_train, 'wfs', 'dm')
-D_test = ImageDataset(df_test, 'wfs', 'dm')
-D_val = ImageDataset(df_val, 'wfs', 'dm')
+D_train = ImageDataset(X_train, y_train)
+D_test = ImageDataset(X_test, y_test)
+D_val = ImageDataset(X_val, y_val)
 
 
 # %%
