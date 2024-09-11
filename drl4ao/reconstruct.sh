@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=1 # maximum cpu per task is 3.5 per gpus
 #SBATCH --gres=gpu:1
 #SBATCH --mem=40G                        # memory per node
-#SBATCH --time=00-03:59         # time (DD-HH:MM)
+#SBATCH --time=00-00:59         # time (DD-HH:MM)
 #SBATCH --account=def-lplevass
 #SBATCH --job-name=train_recon_randn_cmd
 #SBATCH --mail-type=BEGIN,END,FAIL

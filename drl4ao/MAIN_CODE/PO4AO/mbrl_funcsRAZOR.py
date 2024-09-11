@@ -245,6 +245,7 @@ def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8)
 
     scaling = np.linspace(min_scale, max_scale, num_scale)
 
+
     for i in range(num_scale):
         for j in range(size):
 

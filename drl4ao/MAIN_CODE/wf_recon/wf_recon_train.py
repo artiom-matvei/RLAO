@@ -43,12 +43,12 @@ env.tel*env.dm*env.wfs
 
 # %%
 
-wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10,\
-                     min_scale=1e-9, max_scale=1e-6)
+# wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10,\
+#                      min_scale=1e-9, max_scale=1e-6)
 
-# Save the dataset
-np.save(savedir+'/wfs_frames', wfsf)
-np.save(savedir+'/dm_cmds', dmc)
+# # Save the dataset
+# np.save(savedir+'/wfs_frames', wfsf)
+# np.save(savedir+'/dm_cmds', dmc)
 
 #%%
 #CHECK DATA FROM THE DATASET
@@ -69,13 +69,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # %%
 
-# X = np.load(savedir+'/wfs_frames.npy')
-# y = np.load(savedir+'/dm_cmds.npy')
-X = wfsf
-y = dmc
+X = np.load(savedir+'/wfs_frames.npy')
+y = np.load(savedir+'/dm_cmds.npy')
+# X = wfsf
+# y = dmc
 
 # Set the random seed for reproducibility
-np.random.seed(42)
+np.random.seed(24)
 
 # Shuffle the data indices
 indices = np.arange(len(X))
@@ -111,7 +111,7 @@ D_val = ImageDataset(X_val, y_val)
 # %%
 
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.001)
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
 criterion = nn.SmoothL1Loss()
 
 reconstructor.to(device)
@@ -153,7 +153,7 @@ for epoch in range(n_epochs):
     
     avg_train_loss = running_loss/len(train_loader)
     train_losses.append(avg_train_loss)
-    print(f"Epoch {epoch+1}/{n_epochs}, Loss: {avg_train_loss:.4f}")
+    print(f"Epoch {epoch+1}/{n_epochs}, Loss: {avg_train_loss}")
 
 
     # Validation phase
@@ -174,10 +174,10 @@ for epoch in range(n_epochs):
     avg_val_loss = val_loss/len(val_loader)
     val_losses.append(avg_val_loss)
 
-    with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
-        f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss:.4f}\n")
+    # with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
+    #     f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
-    print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss:.4f}')
+    print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
 # Test phase (after all epochs)
 reconstructor.eval()  # Set the model to evaluation mode
