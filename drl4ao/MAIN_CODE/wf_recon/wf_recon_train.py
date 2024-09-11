@@ -75,7 +75,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #Transform commands to regular scale
 X = wfsf
 y_raw = dmc
-y = np.arcsinh(y_raw / 1e-9)
+y = np.arcsinh(y_raw / 1e-6)
 
 
 # Set the random seed for reproducibility
