@@ -137,7 +137,7 @@ ema_val_losses = []
 best_val_loss = float('inf')  # Initialize to infinity
 save_path = savedir+'/models/best_models_ema_OL.pt'  # Path to save the best model
 
-n_epochs = args.iters
+n_epochs = 300
 for epoch in range(n_epochs):
 
     #Training phase
@@ -203,16 +203,20 @@ for epoch in range(n_epochs):
         # Save the best model
         torch.save({
             'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
+            'model_state_dict': reconstructor.state_dict(),
             'ema_model_state_dict': ema_model.module.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'val_loss': best_val_loss,
         }, save_path)
 
-    # with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
-    #     f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
+    with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
+        f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
+
+    np.save(savedir+'/losses/train_loss_ema', train_losses)
+    np.save(savedir+'/losses/val_loss_ema', val_losses)
+    np.save(savedir+'/losses/ema_val_loss_ema', ema_val_losses)
 
 # Test phase (after all epochs)
 reconstructor.eval()  # Set the model to evaluation mode
