@@ -150,14 +150,14 @@ for epoch in range(n_epochs):
 
 #%% 
 # Load the model
-network = load_model(savedir+'/reconstructor_cmd.pt')
+network = load_model(savedir+'/reconstructor_cmd_asinh.pt')
 
 # Make predictions
 obs = torch.tensor(wfsf).float().unsqueeze(1)
 
 with torch.no_grad():
     pred = network(obs)
-    pred_OPD = OPD_model(network(obs), modes, res)
+    # pred_OPD = OPD_model(network(obs), modes, res)
 
 
 # Run ground truth commands through the model
@@ -165,27 +165,29 @@ with torch.no_grad():
 # Reshape commands into image
 cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
 
-gt_opd = OPD_model(torch.tensor(cmd_img).unsqueeze(1), modes, res)
+# gt_opd = OPD_model(torch.tensor(cmd_img).unsqueeze(1), modes, res)
 
 
 #%%
-fig, ax = plt.subplots(3,3, figsize=(10,10))
+fig, ax = plt.subplots(4,3, figsize=(10,13))
 
 for i in range(3):
     cax1 = ax[0,i].imshow(wfsf[i])
-    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-3e-6, vmax=3e-6)
-    cax3 = ax[2,i].imshow(cmd_img[i], vmin=-3e-6, vmax=3e-6)
+    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-15, vmax=15)
+    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i] / 1e-9), vmin=-15, vmax=15)
+    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i] / 1e-9) - pred[i].squeeze(0).detach().numpy(),\
+                                                                 vmin=-15, vmax=15)
 
 
     ax[0,i].axis('off')
     ax[1,i].axis('off')
     ax[2,i].axis('off')
-
+    ax[3,i].axis('off')
 
     ax[0,i].set_title('Input WFS Image', size=15)
     ax[1,i].set_title('Reconstructed Phase', size=15)
     ax[2,i].set_title('Ground Truth Phase', size=15)
-    
+    ax[3,i].set_title('Difference', size=15)
 
 # plt.tight_layout()
 
