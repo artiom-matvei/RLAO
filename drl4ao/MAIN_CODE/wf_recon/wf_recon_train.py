@@ -43,12 +43,12 @@ env.tel*env.dm*env.wfs
 
 # %%
 
-# wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10,\
-#                      min_scale=1e-9, max_scale=1e-6)
+wfsf, dmc = make_diverse_dataset(env, size=10000, num_scale=1,\
+                     min_scale=1e-6, max_scale=1e-6)
 
-# # Save the dataset
-# np.save(savedir+'/wfs_frames', wfsf)
-# np.save(savedir+'/dm_cmds', dmc)
+# Save the dataset
+np.save(savedir+'/datasets/wfs_frames_emin6', wfsf)
+np.save(savedir+'/datasets/dm_cmds_emin6', dmc)
 
 #%%
 #CHECK DATA FROM THE DATASET
@@ -69,14 +69,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # %%
 
-X = np.load(savedir+'/wfs_frames.npy')
-y_raw = np.load(savedir+'/dm_cmds.npy')
+# X = np.load(savedir+'/wfs_frames.npy')
+# y_raw = np.load(savedir+'/dm_cmds.npy')
 
 #Transform commands to regular scale
-
+X = wfsf
+y_raw = dmc
 y = np.arcsinh(y_raw / 1e-9)
-# X = wfsf
-# y = dmc
+
 
 # Set the random seed for reproducibility
 np.random.seed(432)
@@ -115,7 +115,7 @@ D_val = ImageDataset(X_val, y_val)
 # %%
 
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001, weight_decay=1e-4)
 criterion = nn.MSELoss()
 
 reconstructor.to(device)
@@ -127,8 +127,11 @@ test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
 
 train_losses = []
 val_losses = []
+# Variable to store the best validation loss and path to save the model
+best_val_loss = float('inf')  # Initialize to infinity
+save_path = savedir+'models/best_model.pt'  # Path to save the best model
 
-n_epochs = 500
+n_epochs = args.iters
 for epoch in range(n_epochs):
 
     #Training phase
@@ -142,8 +145,6 @@ for epoch in range(n_epochs):
         
         # Forward pass
         outputs = env.img_to_vec(reconstructor(inputs))
-
-      
 
         # Get the OPD from the model
         loss = criterion(outputs, targets)
@@ -178,6 +179,18 @@ for epoch in range(n_epochs):
     avg_val_loss = val_loss/len(val_loader)
     val_losses.append(avg_val_loss)
 
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss  # Update the best validation loss
+        print(f"Validation loss improved to {val_loss.item():.4f}, saving model...")
+        
+        # Save the best model
+        torch.save({
+            'epoch': epoch + 1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'val_loss': best_val_loss,
+        }, save_path)
+
     # with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
     #     f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
@@ -204,8 +217,8 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/train_loss_asinh', train_losses)
-np.save(savedir+'/val_loss_asinh', val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_asinh.pt')
+np.save(savedir+'/train_loss_asinh_OL', train_losses)
+np.save(savedir+'/val_loss_asinh_OL', val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/reconstructor_cmd_asinh_OL.pt')
 
 # %%

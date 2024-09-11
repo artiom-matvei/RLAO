@@ -21,7 +21,7 @@ anim: False
 anim_len: 500
 
 initial_sigma: 0.2
-iters: 100
+iters: 200
 max_ts: 500
 n_history: 20
 T: 5
@@ -30,3 +30,4 @@ device: 'cuda:0'
 warmup_ts: 20
 contrast: False
 batch_size: 32
+
