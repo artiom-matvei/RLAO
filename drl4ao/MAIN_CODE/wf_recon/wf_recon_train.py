@@ -29,7 +29,7 @@ except:
 savedir = os.path.dirname(__file__)
 
 env = get_env(args)
-#%%
+
 
 # Generate the dataset of wfs images and phase maps
 env.tel.resetOPD()
@@ -43,7 +43,8 @@ env.tel*env.dm*env.wfs
 
 # %%
 
-wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10)
+wfsf, dmc = make_diverse_dataset(env, size=1000, num_scale=10,\
+                     min_scale=1e-9, max_scale=1e-6)
 
 # Save the dataset
 np.save(savedir+'/wfs_frames', wfsf)

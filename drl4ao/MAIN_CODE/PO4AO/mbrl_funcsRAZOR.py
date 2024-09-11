@@ -233,7 +233,7 @@ def OPD_model(dm_cmd, modes, res, xvalid, yvalid):
     return dm_opd
 
 
-def make_diverse_dataset(env, size, num_scale=6):
+def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8):
     """Creates a pandas DataFrame with wavefront sensor measurements
     and corresponding mirror shapes, generated from normally distributed
     dm coefficients."""
@@ -243,10 +243,12 @@ def make_diverse_dataset(env, size, num_scale=6):
 
     frame = 0
 
-    scaling = np.linspace(1e-9, 1e-8, num_scale)
+    scaling = np.linspace(min_scale, max_scale, num_scale)
 
     for i in range(num_scale):
         for j in range(size):
+
+            env.tel.resetOPD()
 
             command = np.random.randn(*env.dm.coefs.shape) * scaling[i]
 
