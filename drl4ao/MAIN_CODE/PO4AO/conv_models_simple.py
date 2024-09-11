@@ -145,11 +145,17 @@ class Reconstructor(nn.Module):
         self.yvalid = yvalid
 
         self.downsampler = nn.Sequential(
-            nn.Conv2d(input_channels, 64, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.Conv2d(input_channels, 64, kernel_size=3, stride=1, padding=1),  # No downsampling
             nn.LeakyReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.Conv2d(64, 64,             kernel_size=3, stride=1, padding=1),  # No downsampling
             nn.LeakyReLU(),
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.Conv2d(64, 128,            kernel_size=3, stride=1, padding=1),  # No downsampling
+            nn.LeakyReLU(),
+            nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.LeakyReLU(),
+            nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.LeakyReLU(),
+            nn.Conv2d(128, 256,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
             nn.LeakyReLU(),
             # Additional layers can be added if more downsampling is needed
         )
