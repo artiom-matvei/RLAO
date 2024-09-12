@@ -6,10 +6,6 @@ import yaml
 import pickle
 
 
-def read_yaml_file(file_path):
-    with open(file_path, 'r') as file:
-        conf = yaml.safe_load(file)
-    return conf
 
 def append_to_pickle_file(filename, data):
     """

@@ -3,19 +3,15 @@ import os,sys
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import DataLoader
-import pandas as pd
-import pickle
-
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from PO4AO.util_simple import read_yaml_file, append_to_pickle_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset
-from PO4AO.conv_models_simple import Reconstructor, ImageDataset
+from PO4AO.mbrl_funcsRAZOR import get_env
+from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
+from ML_stuff.models import Reconstructor, Reconstructor_2
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # Customize rcParams for specific adjustments
@@ -67,11 +63,8 @@ def load_model(model_path):
 
 # %%
 # Make some fresh data
-# wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
-#                         min_scale=1e-9, max_scale=1e-6)
-
-
-
+wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
+                        min_scale=1e-6, max_scale=1e-6)
 
 # %%
 
@@ -81,6 +74,8 @@ def load_model(model_path):
 # except:
 checkpoint = torch.load(savedir+'/best_model_OL.pt',map_location=device)
 
+
+# Make sure to use the correct network before loading the state dict
 reconstructor = Reconstructor(1,1,11, env.xvalid,env.yvalid)
 # Restore the regular model and optimizer state
 reconstructor.load_state_dict(checkpoint['model_state_dict'])

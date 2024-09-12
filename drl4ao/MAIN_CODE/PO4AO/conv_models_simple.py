@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
 import os
 import numpy as np
-
 
 n_channels_hidden = 4
 n_layers = 1
@@ -136,98 +134,10 @@ class EnsembleDynamics(nn.Module):
         #return torch.mean(torch.cat(next_states, dim=1), dim = 1, keepdim = True)
 
 
-############### Phase Reconstruction ####################
 
 
-class Reconstructor(nn.Module):
-    def __init__(self, input_channels, output_channels, output_size, xvalid, yvalid):
-        super(Reconstructor, self).__init__()
-
-        self.xvalid = xvalid
-        self.yvalid = yvalid
-
-        self.downsampler = nn.Sequential(
-            nn.Conv2d(input_channels, 64, kernel_size=3, stride=1, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            nn.Conv2d(64, 64,             kernel_size=3, stride=1, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            nn.Conv2d(64, 128,            kernel_size=3, stride=1, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 256,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
-            nn.LeakyReLU(),
-            nn.Conv2d(256, 256,           kernel_size=3, stride=2, padding=1),  # No downsampling
-            nn.LeakyReLU(),
-            # Additional layers can be added if more downsampling is needed
-        )
-
-        # Final layer to adjust the output to exactly m x m
-        self.final_conv = nn.Conv2d(256, output_channels, kernel_size=3, padding=1)
-        self.final_pool = nn.AdaptiveAvgPool2d(output_size)  # Output size mxm
-
-    def forward(self, x):
-        x = self.downsampler(x)
-        x = self.final_conv(x)
-        x = self.final_pool(x)
-
-        # Mask out the invalid region
-        x_out = torch.zeros_like(x)
-        x_out[:,:,self.xvalid, self.yvalid] = x[:,:,self.xvalid, self.yvalid]
-
-        return x_out
-    
-
-class ImageDataset(Dataset):
-    def __init__(self, inputs, outputs):
-        self.inputs = inputs
-        self.outputs = outputs
 
 
-    def __len__(self):
-        return len(self.inputs)
-
-    def __getitem__(self, idx):
-        # Load input image and target from the dataframe
-        input_image = self.inputs[idx]
-        target_image = self.outputs[idx]
-        
-        # Convert to float and apply any transformations (like normalization)
-        input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
-        target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
-
-        input_image = (input_image - input_image.mean()) / input_image.std()
 
 
-        return input_image, target_image
-
-class FileDataset(Dataset):
-    def __init__(self, dataset_dir_path, input_filelist, target_filelist, scale=1e-6):
-        self.dataset_dir_path = dataset_dir_path
-        self.input_filelist = input_filelist
-        self.target_filelist = target_filelist
-        self.scale = scale
-
-    def __len__(self):
-        return len(self.input_filelist)
-
-    def __getitem__(self, idx):
-        # Load input image and target from the dataframe
-        input_image = np.load(self.dataset_dir_path+'/inputs/' + self.input_filelist[idx])
-        target_image = np.load(self.dataset_dir_path+'/targets/' +self.target_filelist[idx])
-        
-        # Convert to float and apply any transformations (like normalization)
-        input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
-        target_image = torch.tensor(np.arcsinh(target_image / self.scale), dtype=torch.float32).unsqueeze(0)
-
-        input_image = (input_image - input_image.mean()) / input_image.std()
-
-
-        return input_image, target_image
 

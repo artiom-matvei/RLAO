@@ -286,7 +286,7 @@ class OOPAO(gym.Env):
             
         # These are the calibration data used to close the loop
         calib_CL    = calib_zernike
-        M2C_CL      = M2C_zernike
+        self.M2C_CL      = M2C_zernike
 
 
         # combine telescope with atmosphere
@@ -317,8 +317,8 @@ class OOPAO(gym.Env):
         self.wfs.cam.readoutNoise    = 14
         self.display                 = True
 
-        self.reconstructor = M2C_CL@calib_CL.M
-        self.F = M2C_CL @ np.linalg.pinv(M2C_CL)
+        self.reconstructor = self.M2C_CL@calib_CL.M
+        self.F = self.M2C_CL @ np.linalg.pinv(self.M2C_CL)
 
         self.dm_proj = self.compute_dm_proj()
 

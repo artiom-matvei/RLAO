@@ -4,18 +4,15 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pandas as pd
-import pickle
-
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from PO4AO.util_simple import read_yaml_file #TorchWrapper, 
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset, dataset_to_file
-from PO4AO.conv_models_simple import Reconstructor, ImageDataset, FileDataset
+from PO4AO.mbrl_funcsRAZOR import get_env
+from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
+from ML_stuff.models import Reconstructor, Reconstructor_2
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
@@ -33,14 +30,16 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
-# Generate the dataset of wfs images and phase maps
-env.tel.resetOPD()
-env.tel*env.dm*env.wfs
+
 
 
 # %%
 
 #------------- Uncomment to make your own dataset locally -------------#
+
+# # Generate the dataset of wfs images and phase maps
+# env.tel.resetOPD()
+# env.tel*env.dm*env.wfs
 # wfsf, dmc = make_diverse_dataset(env, size=10000, num_scale=1,\
 #                      min_scale=1e-6, max_scale=1e-6)
 
@@ -120,7 +119,7 @@ D_val = FileDataset(data_dir_path, X_val, y_val)
 
 # %%
 
-reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
+reconstructor = Reconstructor_2(1,1,11, env.xvalid, env.yvalid)
 
 # EMA of model parameters
 ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
