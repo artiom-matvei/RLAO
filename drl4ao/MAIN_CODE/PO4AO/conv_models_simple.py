@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
+import os
 
 
 n_channels_hidden = 4
@@ -153,9 +154,15 @@ class Reconstructor(nn.Module):
             nn.LeakyReLU(),
             nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
             nn.LeakyReLU(),
+            nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # No downsampling
+            nn.LeakyReLU(),
+            nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # No downsampling
+            nn.LeakyReLU(),
             nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
             nn.LeakyReLU(),
             nn.Conv2d(128, 256,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.LeakyReLU(),
+            nn.Conv2d(256, 256,           kernel_size=3, stride=2, padding=1),  # No downsampling
             nn.LeakyReLU(),
             # Additional layers can be added if more downsampling is needed
         )
@@ -198,3 +205,27 @@ class ImageDataset(Dataset):
 
 
         return input_image, target_image
+
+class FileDataset(Dataset):
+    def __init__(self, dataset_dir_path, tag):
+        self.dataset_dir_path = dataset_dir_path
+        self.input_filelist = os.listdir(dataset_dir_path + tag + '/inputs')
+        self.target_filelist = os.listdir(dataset_dir_path + tag + '/targets')
+
+    def __len__(self):
+        return len(self.filelist)
+
+    def __getitem__(self, idx):
+        # Load input image and target from the dataframe
+        input_image = np.load(self.inputs_filelist[idx])
+        target_image = np.load(self.filelist[idx])
+        
+        # Convert to float and apply any transformations (like normalization)
+        input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
+        target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
+
+        intput_image = (input_image - input_image.mean()) / input_image.std()
+
+
+        return input_image, target_image
+

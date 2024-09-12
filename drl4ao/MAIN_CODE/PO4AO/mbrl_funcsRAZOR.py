@@ -272,6 +272,43 @@ def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8)
     return wfs_frames, dm_commands
 
 
+def dataset_to_file(env, size, scaling=1e-6, dir_path = '', tag = ''):
+    """Creates a pandas DataFrame with wavefront sensor measurements
+    and corresponding mirror shapes, generated from normally distributed
+    dm coefficients."""
+
+    dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
+    wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
+
+    frame = 0
+
+
+    for j in range(size):
+
+        env.tel.resetOPD()
+
+        command = np.random.randn(*env.dm.coefs.shape) * scaling
+
+        env.dm.coefs = command.copy()
+
+        print(np.max(np.abs(env.dm.coefs.copy())))
+
+        env.tel*env.dm
+        env.tel*env.wfs
+
+        np.save(dir_path + tag + f'/inputs/wfs_'str(int(frame)).zfill(6), np.float32(env.wfs.cam.frame.copy()))
+        np.save(dir_path + tag + f'/targets/dmc_'str(int(frame)).zfill(6), np.float32(command.copy()))
+
+        frame += 1
+
+        if j+1 == size:
+            print(f'scale factor:{scaling[i]}')
+            print(f"Generated {frame} samples")
+
+    return
+
+
+
 
 def get_OL_phase_dataset(env, size):
     """Creates a pandas DataFrame with wavefront sensor measurements
