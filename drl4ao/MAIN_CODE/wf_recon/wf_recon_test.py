@@ -20,11 +20,11 @@ plt.rcParams['figure.facecolor'] = 'white'  # Set figure background to black
 plt.rcParams['axes.facecolor'] = 'white'    # Set axes background to black
 plt.rcParams['savefig.facecolor'] = 'white' # Set saved figures' background to black
 plt.rcParams['axes.grid'] = False           # Disable grid for a cleaner look on dark background
-plt.rcParams['xtick.color'] = 'white'
-plt.rcParams['ytick.color'] = 'white'
-plt.rcParams['axes.labelcolor'] = 'white'
-plt.rcParams['axes.edgecolor'] = 'white'
-plt.rcParams['legend.facecolor'] = 'gray'
+plt.rcParams['xtick.color'] = 'black'
+plt.rcParams['ytick.color'] = 'black'
+plt.rcParams['axes.labelcolor'] = 'black'
+plt.rcParams['axes.edgecolor'] = 'black'
+plt.rcParams['legend.facecolor'] = 'white'
 
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
@@ -136,9 +136,12 @@ train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
 val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
 ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
 
-plt.plot(train_loss, label='train loss')
-plt.plot(val_loss, label='val loss')
-plt.plot(ema_loss, label='ema loss', ls='--', c='k')
+plt.plot(train_loss, label='Train Loss', color='k')
+plt.plot(val_loss, label='Val Loss', color='r')
+# plt.plot(ema_loss, label='ema loss', ls='--', c='k')
+
+plt.axvline(np.argmin(val_loss), color='k', ls='--', alpha=0.4, label='Best Model')
+
 plt.yscale('log')
 plt.legend()
 
