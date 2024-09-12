@@ -3,6 +3,7 @@ import numpy as np
 import os
 from torch.utils.data import DataLoader, Dataset
 import yaml
+import time
 
 
 class ImageDataset(Dataset):
@@ -29,19 +30,27 @@ class ImageDataset(Dataset):
         return input_image, target_image
 
 class FileDataset(Dataset):
-    def __init__(self, dataset_dir_path, input_filelist, target_filelist, scale=1e-6):
-        self.dataset_dir_path = dataset_dir_path
-        self.input_filelist = input_filelist
-        self.target_filelist = target_filelist
+    def __init__(self, input_file_path, target_file_path, split_indices, scale=1e-6, use_mmap=True):
+        self.input_file_path = input_file_path
+        self.target_file_path = target_file_path
+        self.split_indices = split_indices
         self.scale = scale
+        self.use_mmap = use_mmap
+
+        if use_mmap:
+            self.input_data = np.load(self.input_file_path, mmap_mode='r')[self.split_indices]
+            self.target_data = np.load(self.target_file_path, mmap_mode='r')[self.split_indices]
+        else:
+            self.input_data = np.load(self.input_file_path)[self.split_indices]
+            self.target_data = np.load(self.target_file_path)[self.split_indices]
 
     def __len__(self):
-        return len(self.input_filelist)
+        return len(self.split_indices)
 
     def __getitem__(self, idx):
         # Load input image and target from the dataframe
-        input_image = np.load(self.dataset_dir_path+'/inputs/' + self.input_filelist[idx])
-        target_image = np.load(self.dataset_dir_path+'/targets/' +self.target_filelist[idx])
+        input_image = self.input_data[idx]
+        target_image = self.target_data[idx]
         
         # Convert to float and apply any transformations (like normalization)
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
@@ -59,29 +68,33 @@ def read_yaml_file(file_path):
     return conf
 
 
-def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8):
+def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8, savedir='', tag=''):
     """Creates a pandas DataFrame with wavefront sensor measurements
     and corresponding mirror shapes, generated from normally distributed
     dm coefficients."""
 
-    dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
-    wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
+    # dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
+    # wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
+
+    dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
+                                                shape=(size*num_scale, *env.dm.coefs.shape))
+    wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
+                                                shape=(size*num_scale, *env.wfs.cam.frame.shape))
 
     frame = 0
 
     scaling = np.linspace(min_scale, max_scale, num_scale)
 
-
+    start = time.time()
     for i in range(num_scale):
         for j in range(size):
+            
 
             env.tel.resetOPD()
 
             command = np.random.randn(*env.dm.coefs.shape) * scaling[i]
 
             env.dm.coefs = command.copy()
-
-            print(np.max(np.abs(env.dm.coefs.copy())))
 
             env.tel*env.dm
             env.tel*env.wfs
@@ -91,10 +104,13 @@ def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8)
 
             frame += 1
 
-            if j+1 == size:
-                print(f'scale factor:{scaling[i]}')
-                print(f"Generated {frame} samples")
+            if frame % 1000 == 0:
+                print(f"Generated {frame} samples in {time.time()-start} seconds")
+                start = time.time()
 
+
+    dm_commands.flush()
+    wfs_frames.flush()
     return wfs_frames, dm_commands
 
 
