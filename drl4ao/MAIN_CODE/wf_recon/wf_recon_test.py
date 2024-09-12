@@ -136,7 +136,7 @@ plt.show()
 
 # plot losses
 tag = 'ema'
-loss_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/losses'
+loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
 val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
 ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
