@@ -43,12 +43,12 @@ env.tel*env.dm*env.wfs
 
 # %%
 
-wfsf, dmc = make_diverse_dataset(env, size=10000, num_scale=1,\
-                     min_scale=1e-6, max_scale=1e-6)
+# wfsf, dmc = make_diverse_dataset(env, size=10000, num_scale=1,\
+#                      min_scale=1e-6, max_scale=1e-6)
 
-# Save the dataset
-np.save(savedir+'/datasets/wfs_frames_emin6', wfsf)
-np.save(savedir+'/datasets/dm_cmds_emin6', dmc)
+# # Save the dataset
+# np.save(savedir+'/datasets/wfs_frames_emin6', wfsf)
+# np.save(savedir+'/datasets/dm_cmds_emin6', dmc)
 
 #%%
 #CHECK DATA FROM THE DATASET
@@ -69,12 +69,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # %%
 
-# X = np.load(savedir+'/wfs_frames.npy')
-# y_raw = np.load(savedir+'/dm_cmds.npy')
+X = np.load(savedir+'/datasets/wfs_frames_emin6.npy')
+y_raw = np.load(savedir+'/datasets/dm_cmds_emin6.npy')
 
 #Transform commands to regular scale
-X = wfsf
-y_raw = dmc
+# X = wfsf
+# y_raw = dmc
 y = np.arcsinh(y_raw / 1e-6)
 
 
@@ -117,13 +117,15 @@ D_val = ImageDataset(X_val, y_val)
 reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
 
 # EMA of model parameters
-ema_reconstructor = torch.optim.swa_utils.AveragedModel(model, \
+ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
     multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
 
 optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
 criterion = nn.MSELoss()
 
 reconstructor.to(device)
+ema_reconstructor.to(device)
+
 
 train_loader = DataLoader(D_train, batch_size=32, shuffle=True)
 val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
@@ -196,15 +198,15 @@ for epoch in range(n_epochs):
 
 
 
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss  # Update the best validation loss
-        print(f"Validation loss improved to {val_loss.item():.4f}, saving model...")
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss  # Update the best validation loss
+        print(f"Validation loss improved to {avg_val_loss:.4f}, saving model...")
         
         # Save the best model
         torch.save({
             'epoch': epoch + 1,
             'model_state_dict': reconstructor.state_dict(),
-            'ema_model_state_dict': ema_model.module.state_dict(),
+            'ema_model_state_dict': ema_reconstructor.module.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'val_loss': best_val_loss,
         }, save_path)
