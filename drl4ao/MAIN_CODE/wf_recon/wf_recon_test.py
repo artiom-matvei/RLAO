@@ -20,9 +20,9 @@ from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # Customize rcParams for specific adjustments
 plt.rcParams['image.cmap'] = 'inferno'      # Set colormap to inferno for imshow
-plt.rcParams['figure.facecolor'] = 'black'  # Set figure background to black
-plt.rcParams['axes.facecolor'] = 'black'    # Set axes background to black
-plt.rcParams['savefig.facecolor'] = 'black' # Set saved figures' background to black
+plt.rcParams['figure.facecolor'] = 'white'  # Set figure background to black
+plt.rcParams['axes.facecolor'] = 'white'    # Set axes background to black
+plt.rcParams['savefig.facecolor'] = 'white' # Set saved figures' background to black
 plt.rcParams['axes.grid'] = False           # Disable grid for a cleaner look on dark background
 plt.rcParams['xtick.color'] = 'white'
 plt.rcParams['ytick.color'] = 'white'
@@ -70,93 +70,30 @@ def load_model(model_path):
 # wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #                         min_scale=1e-9, max_scale=1e-6)
 
-X = np.load(savedir+'/wfs_frames.npy', mmap_mode='r')
-y = np.load(savedir+'/dm_cmds.npy', mmap_mode='r')
 
-np.random.seed(24)
-
-# Shuffle the data indices
-indices = np.arange(10000)
-np.random.shuffle(indices)
-
-# Define the split ratios
-train_ratio = 0.6
-val_ratio = 0.2
-test_ratio = 0.2
-
-# Calculate the split indices
-train_size = int(train_ratio * 10000)
-val_size = int(val_ratio * 10000)
-
-# Get the corresponding indices for each set
-train_indices = indices[:train_size]
-val_indices = indices[train_size:train_size + val_size]
-test_indices = indices[train_size + val_size:]
-
-# Split the data
-X_train, X_val, X_test = X[train_indices], X[val_indices], X[test_indices]
-y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
-
-# Now you have:
-# X_train, y_train: training set
-# X_val, y_val: validation set
-# X_test, y_test: test set
-# D_train = ImageDataset(X_train, y_train)
-# D_test = ImageDataset(X_test, y_test)
-D_val = ImageDataset(X_val, y_val)
 
 
 # %%
 
-reconstructor = load_model(savedir+'/reconstructor_cmd.pt')
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.00001)
-criterion = nn.SmoothL1Loss()
+# try:
+#     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
-reconstructor.to(device)
+# except:
+checkpoint = torch.load(savedir+'/best_model_OL.pt',map_location=device)
 
-# train_loader = DataLoader(D_train, batch_size=32, shuffle=True)
-val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
-# test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
-
-
-train_losses = []
-val_losses = []
-
-n_epochs = 1
-for epoch in range(n_epochs):
-    reconstructor.eval()
-    val_loss = 0.0
-    with torch.no_grad():
-        for inputs, targets in val_loader:
-            inputs = inputs.to(device)
-            targets = targets.to(device)
-
-            #forward pass
-            outputs = env.img_to_vec(reconstructor(inputs))
-
-
-            loss = criterion(outputs, targets)
-            val_loss += loss.item()
-
-    avg_val_loss = val_loss/len(val_loader)
-    val_losses.append(avg_val_loss)
-
-    # with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
-    #     f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
-
-    print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
-
-
+reconstructor = Reconstructor(1,1,11, env.xvalid,env.yvalid)
+# Restore the regular model and optimizer state
+reconstructor.load_state_dict(checkpoint['model_state_dict'])
 
 #%% 
 # Load the model
-network = load_model(savedir+'/reconstructor_cmd_asinh.pt')
-
+# network = load_model(savedir+'/reconstructor_cmd_asinh.pt')
+reconstructor.eval()
 # Make predictions
 obs = torch.tensor(wfsf).float().unsqueeze(1)
 
 with torch.no_grad():
-    pred = network(obs)
+    pred = reconstructor(obs)
     # pred_OPD = OPD_model(network(obs), modes, res)
 
 
@@ -171,12 +108,14 @@ cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
 #%%
 fig, ax = plt.subplots(4,3, figsize=(10,13))
 
+vrange = 3
+
 for i in range(3):
     cax1 = ax[0,i].imshow(wfsf[i])
-    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-15, vmax=15)
-    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i] / 1e-9), vmin=-15, vmax=15)
-    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i] / 1e-9) - pred[i].squeeze(0).detach().numpy(),\
-                                                                 vmin=-15, vmax=15)
+    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
+    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i] / 1e-6), vmin=-vrange, vmax=vrange)
+    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i] / 1e-6) - pred[i].squeeze(0).detach().numpy(),\
+                                                                 vmin=-vrange, vmax=vrange)
 
 
     ax[0,i].axis('off')
