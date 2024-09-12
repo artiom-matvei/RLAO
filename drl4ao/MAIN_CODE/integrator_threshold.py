@@ -8,7 +8,7 @@ import os,sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from ML_stuff.dataset_tools import read_yaml_file #TorchWrapper, 
+from ML_stuff.dataset_tools import read_yaml_file, find_main_directory
 from Plots.plots import save_plots
 # import matplotlib.pyplot as plt
 # import argparse
@@ -225,17 +225,15 @@ for mag in mags:
 # plt.imshow(after - before)
 # plt.show()
 # %%
-path_to_logs = '/Users/parkerlevesque/School/Research/AO/RLAO/logs'
-
 
 fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 9))
 
-data = torch.load(path_to_logs + '/many_threshold/integrator/20240907-172744_gains_magnitude_4.5_gain_0.2/sr2plot.pt')
+data = torch.load(find_main_directory(__file__) + '/logs/many_threshold/integrator/20240907-172744_gains_magnitude_4.5_gain_0.2/sr2plot.pt')
 
 arr = np.array(data).reshape(6,10)
 srs = np.mean(arr, axis=1)
 
-wfs_raw = np.load(path_to_logs + '/many_threshold/integrator/20240907-172744_gains_magnitude_4.5_gain_0.2/raw_wfs.npy')
+wfs_raw = np.load(find_main_directory(__file__) + '/logs/many_threshold/integrator/20240907-172744_gains_magnitude_4.5_gain_0.2/raw_wfs.npy')
 
 
 wfs_max = np.max(wfs_raw)
@@ -284,7 +282,7 @@ custom_colors = ['#440154', '#482878', '#F0701D', '#FF4500', '#FDE724']
 plt.style.use('seaborn-v0_8')
 plt.rc('axes', prop_cycle=cycler('color', custom_colors))
 
-exp = '/Users/parkerlevesque/School/Research/AO/RLAO/logs/many_threshold_plus/many_threshold_plus/integrator'
+exp = find_main_directory(__file__) + '/logs/many_threshold_plus/many_threshold_plus/integrator'
 
 x = []
 

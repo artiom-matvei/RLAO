@@ -67,6 +67,17 @@ def read_yaml_file(file_path):
         conf = yaml.safe_load(file)
     return conf
 
+def find_main_directory(path):
+    # Get the absolute path of the starting point
+    path = os.path.abspath(path)
+    
+    # Traverse up the directory tree
+    while path != os.path.dirname(path):  # Check if we reached the root of the filesystem
+        if os.path.basename(path) == "RLAO":  # Check if the current directory is named "main"
+            return path
+        path = os.path.dirname(path)  # Move up one directory
+    return None  # Return None if the "main" directory is not found
+
 
 def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8, savedir='', tag=''):
     """Creates a pandas DataFrame with wavefront sensor measurements
