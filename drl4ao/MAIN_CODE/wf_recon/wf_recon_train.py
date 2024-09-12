@@ -30,7 +30,8 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
-
+with open("training_progress2.txt", "a") as f:
+    f.write(f"Done making env \n")
 
 
 # %%
@@ -117,6 +118,9 @@ D_train = FileDataset(data_dir_path, X_train, y_train)
 D_test = FileDataset(data_dir_path, X_test, y_test)
 D_val = FileDataset(data_dir_path, X_val, y_val)
 
+with open("training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+    f.write(f"Done making train, test, val datasets \n")
+
 # %%
 
 reconstructor = Reconstructor_2(1,1,11, env.xvalid, env.yvalid)
@@ -143,6 +147,9 @@ ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
 save_path = savedir+'/models/best_models_ema_OL_bigdataset.pt'  # Path to save the best model
+
+with open("training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+    f.write(f"Starting Training \n")
 
 n_epochs = 300
 for epoch in range(n_epochs):
