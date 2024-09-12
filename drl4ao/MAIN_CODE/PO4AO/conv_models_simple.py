@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 import os
+import numpy as np
 
 
 n_channels_hidden = 4
@@ -201,7 +202,7 @@ class ImageDataset(Dataset):
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
         target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
 
-        intput_image = (input_image - input_image.mean()) / input_image.std()
+        input_image = (input_image - input_image.mean()) / input_image.std()
 
 
         return input_image, target_image
@@ -211,20 +212,21 @@ class FileDataset(Dataset):
         self.dataset_dir_path = dataset_dir_path
         self.input_filelist = input_filelist
         self.target_filelist = target_filelist
+        self.scale = scale
 
     def __len__(self):
         return len(self.input_filelist)
 
     def __getitem__(self, idx):
         # Load input image and target from the dataframe
-        input_image = np.load(dataset_dir_path+'/inputs/' + self.input_filelist[idx])
-        target_image = np.load(dataset_dir_path+'/targets/' +self.target_filelist[idx])
+        input_image = np.load(self.dataset_dir_path+'/inputs/' + self.input_filelist[idx])
+        target_image = np.load(self.dataset_dir_path+'/targets/' +self.target_filelist[idx])
         
         # Convert to float and apply any transformations (like normalization)
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
-        target_image = torch.tensor(np.arcsinh(target_image / scale), dtype=torch.float32).unsqueeze(0)
+        target_image = torch.tensor(np.arcsinh(target_image / self.scale), dtype=torch.float32).unsqueeze(0)
 
-        intput_image = (input_image - input_image.mean()) / input_image.std()
+        input_image = (input_image - input_image.mean()) / input_image.std()
 
 
         return input_image, target_image
