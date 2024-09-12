@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Reconstructor(nn.Module):
     def __init__(self, input_channels, output_channels, output_size, xvalid, yvalid):
-        super(Reconstructor, self).__init__()
+        super().__init__()
 
         self.xvalid = xvalid
         self.yvalid = yvalid
@@ -49,7 +49,7 @@ class Reconstructor(nn.Module):
 
 class Reconstructor_2(nn.Module):
     def __init__(self, input_channels, output_channels, output_size, xvalid, yvalid):
-        super(Reconstructor, self).__init__()
+        super().__init__()
 
         self.xvalid = xvalid
         self.yvalid = yvalid

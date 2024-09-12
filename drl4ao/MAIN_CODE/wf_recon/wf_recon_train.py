@@ -30,7 +30,7 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
-with open("training_progress2.txt", "a") as f:
+with open("test_training_progress2.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -69,12 +69,12 @@ data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_
 X = os.listdir(data_dir_path + '/inputs')
 y = os.listdir(data_dir_path + '/targets')
 
-ds_size = len(X)
+ds_size = 20000
 
 
 # %%
 # Set the random seed for reproducibility
-np.random.seed(4327)
+np.random.seed(43278)
 
 # Shuffle the data indices
 indices = np.arange(ds_size)
@@ -92,7 +92,7 @@ val_size = int(val_ratio * ds_size)
 # Get the corresponding indices for each set
 train_indices = indices[:train_size]
 val_indices = indices[train_size:train_size + val_size]
-test_indices = indices[train_size + val_size:]
+test_indices = indices[train_size + val_size:ds_size]
 
 
 X = np.array(X)
@@ -118,12 +118,12 @@ D_train = FileDataset(data_dir_path, X_train, y_train)
 D_test = FileDataset(data_dir_path, X_test, y_test)
 D_val = FileDataset(data_dir_path, X_val, y_val)
 
-with open("training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+with open("test_training_progress2.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
 
-reconstructor = Reconstructor_2(1,1,11, env.xvalid, env.yvalid)
+reconstructor = Reconstructor(1,1,11, env.xvalid, env.yvalid)
 
 # EMA of model parameters
 ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
@@ -148,11 +148,15 @@ ema_val_losses = []
 best_val_loss = float('inf')  # Initialize to infinity
 save_path = savedir+'/models/best_models_ema_OL_bigdataset.pt'  # Path to save the best model
 
-with open("training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+with open("test_training_progress2.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
+
+
 
 n_epochs = 300
 for epoch in range(n_epochs):
+
+    start = time.time()
 
     #Training phase
     reconstructor.train()
@@ -181,6 +185,12 @@ for epoch in range(n_epochs):
     train_losses.append(avg_train_loss)
     print(f"Epoch {epoch+1}/{n_epochs}, Loss: {avg_train_loss}")
 
+    end_tr = time.time()
+
+    with open("test_training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+        f.write(f"One training epoch took {end_tr - start} seconds\n")
+
+
 
     # Validation phase
     reconstructor.eval()
@@ -208,6 +218,8 @@ for epoch in range(n_epochs):
     avg_ema_val_loss = ema_val_loss/len(val_loader)
     ema_val_losses.append(avg_ema_val_loss)
 
+    with open("test_training_progress2.txt", "a") as f:  # 'a' mode appends to the file
+        f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
     if avg_val_loss < best_val_loss:
@@ -223,7 +235,7 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("training_progress.txt", "a") as f:  # 'a' mode appends to the file
+    with open("test_training_progress2.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
