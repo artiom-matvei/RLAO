@@ -133,3 +133,23 @@ for i in range(3):
 plt.show()
 
 # %%
+
+# plot losses
+tag = 'ema'
+loss_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/losses'
+train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
+val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
+ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
+
+plt.plot(train_loss, label='train loss')
+plt.plot(val_loss, label='val loss')
+plt.plot(ema_loss, label='ema loss', ls='--', c='k')
+plt.yscale('log')
+plt.legend()
+
+plt.title('Training Loss of Wavefront Reconstructor')
+plt.xlabel('Epoch')
+plt.ylabel('MSE Loss')
+
+plt.show()
+# %%
