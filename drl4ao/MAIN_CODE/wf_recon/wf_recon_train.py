@@ -14,8 +14,8 @@ from PO4AO.util_simple import read_yaml_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset
-from PO4AO.conv_models_simple import Reconstructor, ImageDataset
+from PO4AO.mbrl_funcsRAZOR import get_env, make_diverse_dataset, dataset_to_file
+from PO4AO.conv_models_simple import Reconstructor, ImageDataset, FileDataset
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
@@ -27,6 +27,8 @@ try:
 except:
     args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 savedir = os.path.dirname(__file__)
 
 env = get_env(args)
@@ -35,64 +37,57 @@ env = get_env(args)
 env.tel.resetOPD()
 env.tel*env.dm*env.wfs
 
-# plt.imshow(env.tel.OPD)
-# plt.show()
-# plt.imshow(env.dm.OPD)
-# plt.show()
-# plt.imshow(env.wfs.cam.frame)
 
 # %%
 
+#------------- Uncomment to make your own dataset locally -------------#
 # wfsf, dmc = make_diverse_dataset(env, size=10000, num_scale=1,\
 #                      min_scale=1e-6, max_scale=1e-6)
+
+# X = wfsf
+# y_raw = dmc
+
+# ds_size = len(X)
 
 # # Save the dataset
 # np.save(savedir+'/datasets/wfs_frames_emin6', wfsf)
 # np.save(savedir+'/datasets/dm_cmds_emin6', dmc)
 
-#%%
-#CHECK DATA FROM THE DATASET
-# print(len(wfsf), len(dmc))
 
-# frame = 21
+#------------- Uncomment to load a dataset from a single file -------------#
+# X = np.load(savedir+'/datasets/wfs_frames_emin6.npy')
+# y_raw = np.load(savedir+'/datasets/dm_cmds_emin6.npy')
 
-# plt.imshow(wfsf[frame])
-# plt.show()
+# #Transform commands to regular scale
+# y = np.arcsinh(y_raw / 1e-6)
 
-# plt.imshow(env.vec_to_img(torch.tensor(dmc[frame]).float()).detach().numpy(),\
-#                     vmin=-1e-6, vmax=1e-6)
-# plt.colorbar()
-# plt.show()
+# ds_size = len(X)
+#------------- Uncomment to load a dataset from individual files -------------#
+
+data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets/test'
+
+X = os.listdir(data_dir_path + '/inputs')
+y = os.listdir(data_dir_path + '/targets')
+
+ds_size = len(X)
+
 
 # %%
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# %%
-
-X = np.load(savedir+'/datasets/wfs_frames_emin6.npy')
-y_raw = np.load(savedir+'/datasets/dm_cmds_emin6.npy')
-
-#Transform commands to regular scale
-# X = wfsf
-# y_raw = dmc
-y = np.arcsinh(y_raw / 1e-6)
-
-
 # Set the random seed for reproducibility
-np.random.seed(432)
+np.random.seed(4327)
 
 # Shuffle the data indices
-indices = np.arange(len(X))
+indices = np.arange(ds_size)
 np.random.shuffle(indices)
 
 # Define the split ratios
-train_ratio = 0.6
-val_ratio = 0.2
-test_ratio = 0.2
+train_ratio = 0.8
+val_ratio = 0.1
+test_ratio = 0.1
 
 # Calculate the split indices
-train_size = int(train_ratio * len(X))
-val_size = int(val_ratio * len(X))
+train_size = int(train_ratio * ds_size)
+val_size = int(val_ratio * ds_size)
 
 # Get the corresponding indices for each set
 train_indices = indices[:train_size]
@@ -107,10 +102,17 @@ y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
 # X_train, y_train: training set
 # X_val, y_val: validation set
 # X_test, y_test: test set
-D_train = ImageDataset(X_train, y_train)
-D_test = ImageDataset(X_test, y_test)
-D_val = ImageDataset(X_val, y_val)
 
+#------------- Uncomment files loaded in memory -------------#
+# D_train = ImageDataset(X_train, y_train)
+# D_test = ImageDataset(X_test, y_test)
+# D_val = ImageDataset(X_val, y_val)
+
+
+#------------- Uncomment for datasets from file names -------------#
+D_train = FileDataset(data_dir_path, X_train, y_train)
+D_test = FileDataset(data_dir_path, X_test, y_test)
+D_val = FileDataset(data_dir_path, X_val, y_val)
 
 # %%
 

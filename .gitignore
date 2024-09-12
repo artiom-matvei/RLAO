@@ -5,6 +5,9 @@ logs/
 
 .DS_Store
 
+inputs/
+targets/
+
 data_cl/
 env_var.sh
 # Job files

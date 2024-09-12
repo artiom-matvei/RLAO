@@ -277,8 +277,8 @@ def dataset_to_file(env, size, scaling=1e-6, dir_path = '', tag = ''):
     and corresponding mirror shapes, generated from normally distributed
     dm coefficients."""
 
-    dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
-    wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
+    os.makedirs(dir_path + '/' + tag + '/inputs', exist_ok=True)
+    os.makedirs(dir_path + '/' + tag + '/targets', exist_ok=True)
 
     frame = 0
 
@@ -291,13 +291,11 @@ def dataset_to_file(env, size, scaling=1e-6, dir_path = '', tag = ''):
 
         env.dm.coefs = command.copy()
 
-        print(np.max(np.abs(env.dm.coefs.copy())))
-
         env.tel*env.dm
         env.tel*env.wfs
 
-        np.save(dir_path + tag + f'/inputs/wfs_'str(int(frame)).zfill(6), np.float32(env.wfs.cam.frame.copy()))
-        np.save(dir_path + tag + f'/targets/dmc_'str(int(frame)).zfill(6), np.float32(command.copy()))
+        np.save(dir_path + '/' + tag + f'/inputs/wfs_' + str(int(frame)).zfill(6), np.float32(env.wfs.cam.frame.copy()))
+        np.save(dir_path + '/' + tag + f'/targets/dmc_' + str(int(frame)).zfill(6), np.float32(command.copy()))
 
         frame += 1
 

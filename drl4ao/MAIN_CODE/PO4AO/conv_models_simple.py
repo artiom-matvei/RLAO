@@ -207,22 +207,22 @@ class ImageDataset(Dataset):
         return input_image, target_image
 
 class FileDataset(Dataset):
-    def __init__(self, dataset_dir_path, tag):
+    def __init__(self, dataset_dir_path, input_filelist, target_filelist, scale=1e-6):
         self.dataset_dir_path = dataset_dir_path
-        self.input_filelist = os.listdir(dataset_dir_path + tag + '/inputs')
-        self.target_filelist = os.listdir(dataset_dir_path + tag + '/targets')
+        self.input_filelist = input_filelist
+        self.target_filelist = target_filelist
 
     def __len__(self):
-        return len(self.filelist)
+        return len(self.input_filelist)
 
     def __getitem__(self, idx):
         # Load input image and target from the dataframe
-        input_image = np.load(self.inputs_filelist[idx])
-        target_image = np.load(self.filelist[idx])
+        input_image = np.load(dataset_dir_path+'/inputs/' + self.input_filelist[idx])
+        target_image = np.load(dataset_dir_path+'/targets/' +self.target_filelist[idx])
         
         # Convert to float and apply any transformations (like normalization)
         input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
-        target_image = torch.tensor(target_image, dtype=torch.float32).unsqueeze(0)
+        target_image = torch.tensor(np.arcsinh(target_image / scale), dtype=torch.float32).unsqueeze(0)
 
         intput_image = (input_image - input_image.mean()) / input_image.std()
 
