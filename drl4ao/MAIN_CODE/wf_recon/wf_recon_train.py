@@ -94,6 +94,10 @@ train_indices = indices[:train_size]
 val_indices = indices[train_size:train_size + val_size]
 test_indices = indices[train_size + val_size:]
 
+
+X = np.array(X)
+y = np.array(y)
+
 # Split the data
 X_train, X_val, X_test = X[train_indices], X[val_indices], X[test_indices]
 y_train, y_val, y_test = y[train_indices], y[val_indices], y[test_indices]
@@ -139,7 +143,7 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/best_models_ema_OL.pt'  # Path to save the best model
+save_path = savedir+'/models/best_models_ema_OL_bigdataset.pt'  # Path to save the best model
 
 n_epochs = 300
 for epoch in range(n_epochs):
@@ -218,9 +222,9 @@ for epoch in range(n_epochs):
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_ema', train_losses)
-    np.save(savedir+'/losses/val_loss_ema', val_losses)
-    np.save(savedir+'/losses/ema_val_loss_ema', ema_val_losses)
+    np.save(savedir+'/losses/train_loss_ema_big_dataset', train_losses)
+    np.save(savedir+'/losses/val_loss_ema_big_dataset', val_losses)
+    np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
 reconstructor.eval()  # Set the model to evaluation mode
@@ -243,9 +247,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_ema', train_losses)
-np.save(savedir+'/losses/val_loss_ema', val_losses)
-np.save(savedir+'/losses/ema_val_loss_ema', ema_val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_ema.pt')
+np.save(savedir+'/losses/train_loss_ema_big_dataset', train_losses)
+np.save(savedir+'/losses/val_loss_ema_big_dataset', val_losses)
+np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_ema_big_dataset.pt')
 
 # %%
