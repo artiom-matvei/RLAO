@@ -12,9 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 # from parser_Configurations import Config, ConfigAction
 # from OOPAOEnv.OOPAOEnvRazor import OOPAO
 from PO4AO.util_simple import read_yaml_file #TorchWrapper, 
-from Plots.plots import save_plots
-# import matplotlib.pyplot as plt
-# import argparse
+
 import time
 import numpy as np
 from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset
@@ -27,6 +25,8 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 #%%
 
 env = get_env(args)
+
+env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 for gainCL in args.gain_list:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -87,7 +87,8 @@ for gainCL in args.gain_list:
     print(SRs)
     print(rewards)
     print("Saving Data")
-    save_plots(savedir,SRs,rewards,env.LE_PSF) #savedir,evals,reward_sums,env.LE_PS
+    torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+    torch.save(sr, os.path.join(savedir, "sr2plot.pt"))
 
 
     # if args.anim:

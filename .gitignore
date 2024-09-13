@@ -2,6 +2,8 @@ logs/
 
 #Saved torch data
 *.pt
+*.mp4
+*.gif
 
 .DS_Store
 

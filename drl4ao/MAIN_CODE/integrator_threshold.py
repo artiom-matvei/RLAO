@@ -27,6 +27,8 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 #%%
 env = get_env(args)
 
+env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
+
 # %%
 
 mags = np.arange(3, 6, 0.5)
@@ -107,7 +109,8 @@ for mag in mags:
     print(SRs)
     print(rewards)
     print("Saving Data")
-    save_plots(savedir,SRs,rewards,env.LE_PSF) #savedir,evals,reward_sums,env.LE_PS
+    torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+    torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
 
 
     # if args.anim:
