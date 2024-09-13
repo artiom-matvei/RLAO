@@ -113,8 +113,8 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_bigboy.npy'
-target_file_path = data_dir_path+'/dm_cmds_bigboy.npy'
+input_file_path = data_dir_path+'/wfs_frames_big_boy.npy'
+target_file_path = data_dir_path+'/dm_cmds_big_boy.npy'
 
 D_train = FileDataset(input_file_path, target_file_path, train_indices)
 D_test = FileDataset(input_file_path, target_file_path, test_indices)
