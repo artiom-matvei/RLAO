@@ -26,7 +26,6 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 env = get_env(args)
 
-env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 for gainCL in args.gain_list:
     timestamp = time.strftime("%Y%m%d-%H%M%S")

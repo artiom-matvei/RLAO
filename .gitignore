@@ -5,7 +5,7 @@ logs/
 *.mp4
 *.gif
 
-.DS_Store
+*.DS_Store
 
 inputs/
 targets/

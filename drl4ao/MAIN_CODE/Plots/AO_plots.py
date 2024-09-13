@@ -7,8 +7,9 @@ from torch.utils.data import DataLoader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../AO_OOPAO')))
 
-from OOPAO.tools.displayTools import cl_plot, displayMap
+from OOPAO.tools.displayTools import displayMap
 import time
 import numpy as np
 from PO4AO.mbrl_funcsRAZOR import get_env
@@ -31,7 +32,7 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
-env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
+# env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 # %%
 #------------- Simple Plot of WFS / Slope map / OPDs -------------#
@@ -64,7 +65,7 @@ def slope_map(env, with_atm=True, seed=0):
         env.tel.resetOPD()
         env.tel*env.wfs
 
-        env.tel + env.atm
+        # env.tel + env.atm
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
     im1 = ax.imshow(env.wfs.signal_2D.copy().T, cmap='inferno')
@@ -97,8 +98,8 @@ def OPD_model(dm_cmd, modes, res):
     return dm_opd
 
 def linear_reconstructor(env, opd=False, seed=0):
-    env.atm.generateNewPhaseScreen(seed=seed)
-    env.tel*env.wfs
+    # env.atm.generateNewPhaseScreen(seed=seed)
+    # env.tel*env.wfs
 
     integrator = np.matmul(env.reconstructor, env.wfs.signal)
 
@@ -108,7 +109,8 @@ def linear_reconstructor(env, opd=False, seed=0):
         reconstructor = OPD_model(reconstructor, env.dm.modes, env.dm.resolution)[0] * env.tel.pupil
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    ax.imshow(reconstructor, cmap='inferno')
+    im1 = ax.imshow(reconstructor, cmap='inferno')
+    fig.colorbar(im1)
     ax.axis('off')
     plt.show()
 
@@ -119,6 +121,7 @@ def influence_functions(env):
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
     ax.imshow(frame, cmap='inferno')
+    
     ax.axis('off')
     plt.show()
 
@@ -177,6 +180,42 @@ def basis_distribution(env):
 
 
 # ANIMATE THE IM
+def animate_im(env, frame_rate=10):
+
+    slope_cube = np.zeros((env.M2C_CL.shape[1], *env.wfs.signal_2D.shape))
+    dm_cube = np.zeros((env.M2C_CL.shape[1], env.nActuator, env.nActuator))
+    opd_cube = np.zeros((env.M2C_CL.shape[1], *env.tel.OPD.shape))
+
+
+    env.wfs.cam.readoutNoise = 0
+    env.wfs.cam.photonNoise = False
+    env.wfs.cam.darkCurrent = 0
+    env.wfs.cam.FWC = None
+    env.change_mag(4)
+
+    env.tel - env.atm
+    env.tel.resetOPD()
+
+    for i in range(env.M2C_CL.shape[1]):
+        env.dm.coefs = env.M2C_CL[:,i]*1e-6
+        env.tel*env.dm
+        env.tel*env.wfs
+
+        norm_slope = np.linalg.norm(env.wfs.signal_2D)
+        norm_dm = np.linalg.norm(env.dm.coefs)
+        norm_opd = np.linalg.norm(env.tel.OPD)
+
+        slope_cube[i] = env.wfs.signal_2D.copy()/ norm_slope
+        dm_cube[i] = env.vec_to_img(torch.from_numpy(env.dm.coefs).float())/ norm_dm
+        opd_cube[i] = env.tel.OPD.copy()/ norm_opd
+
+    create_gif(slope_cube, frame_rate=frame_rate, output_file='slope_map.gif')
+    create_gif(dm_cube, frame_rate=frame_rate, output_file='dm_map.gif')
+    create_gif(opd_cube, frame_rate=frame_rate, output_file='opd_map.gif')
+
+
+
+    return
 
 
 
@@ -259,5 +298,4 @@ def shwfs_1D():
     # ax.axis('off')
     plt.show()
 
-shwfs_1D()
 # %%

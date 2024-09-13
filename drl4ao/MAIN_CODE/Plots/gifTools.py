@@ -44,6 +44,7 @@ def create_gif(data_cube, frame_rate, output_file, vmin = None, vmax = None, dpi
     img = ax.imshow(masked_data, cmap=cmap, 
                     vmin=vmin, 
                     vmax=vmax)
+    ax.axis('off')
     
     # Animation function
     ani = FuncAnimation(fig, update_frame, 
@@ -52,7 +53,8 @@ def create_gif(data_cube, frame_rate, output_file, vmin = None, vmax = None, dpi
                         interval=1000/frame_rate)
     
     # Save the animation as an MP4
-    writer = FFMpegWriter(fps=frame_rate)
+    # writer = FFMpegWriter(fps=frame_rate)
+    writer = PillowWriter(fps=frame_rate)
     ani.save(output_file, writer=writer, dpi=dpi)
     plt.close(fig)
 
@@ -62,4 +64,4 @@ if __name__ == "__main__":
     data_cube = np.random.rand(10, 100, 100)
     data_cube[0, 0, 0] = np.nan  # Introduce a NaN value
     
-    create_gif(data_cube, frame_rate=2, output_file="output.mp4")
+    create_gif(data_cube, frame_rate=2, output_file="output.gif")

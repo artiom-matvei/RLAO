@@ -239,15 +239,15 @@ class ShackHartmann:
         if self.is_LGS:
             self.get_convolution_spot() 
 
-        self.max_for_threshold = 1
+        # self.max_for_threshold = 1
         # WFS initialization
         self.initialize_wfs()
 
 
-        self.max_for_threshold = np.max(self.cam.frame)
-        self.telescope.resetOPD()    
-        self.telescope*self       
-        self.reference_slopes_maps = np.copy(self.signal_2D) 
+        # self.max_for_threshold = np.max(self.cam.frame)
+        # self.telescope.resetOPD()    
+        # self.telescope*self       
+        # self.reference_slopes_maps = np.copy(self.signal_2D) 
 
 
         
@@ -301,19 +301,19 @@ class ShackHartmann:
             input_std[i] = np.std(self.telescope.OPD[self.telescope.pupil])*2*np.pi/self.telescope.src.wavelength
             
         self.p = np.polyfit(np.linspace(-2,2,5)*amp,mean_slope,deg = 1)
-        # self.slopes_units = np.abs(self.p[0])*(self.telescope.src.wavelength/2/np.pi)
+        self.slopes_units = np.abs(self.p[0])*(self.telescope.src.wavelength/2/np.pi)
         print('Done!')
 
 
-        self.cam.photonNoise        = readoutNoise
-        self.cam.readoutNoise       = photonNoise
+        self.cam.photonNoise        = photonNoise
+        self.cam.readoutNoise       = readoutNoise
         self.telescope.resetOPD()
         
         self.print_properties()
 
     def centroid(self,image,threshold =0.01):
         im = np.atleast_3d(image.copy())    
-        im[im<(threshold*self.max_for_threshold)] = 0
+        im[im<(threshold*im.max())] = 0
         centroid_out         = np.zeros([im.shape[0],2])
         X_map, Y_map= np.meshgrid(np.arange(im.shape[1]),np.arange(im.shape[2]))
         X_coord_map = np.atleast_3d(X_map).T
