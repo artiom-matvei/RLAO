@@ -30,7 +30,6 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
-env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 with open("training_20k.txt", "a") as f:
     f.write(f"Done making env \n")

@@ -37,7 +37,6 @@ savedir = os.path.dirname(__file__)
 #%%
 env = get_env(args)
 
-env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 #%%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
