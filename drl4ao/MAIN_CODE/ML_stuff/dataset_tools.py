@@ -38,8 +38,8 @@ class FileDataset(Dataset):
         self.use_mmap = use_mmap
 
         if use_mmap:
-            self.input_data = np.load(self.input_file_path, mmap_mode='r')[self.split_indices]
-            self.target_data = np.load(self.target_file_path, mmap_mode='r')[self.split_indices]
+            self.input_data = np.load(self.input_file_path, mmap_mode='r', allow_pickle=True)[self.split_indices]
+            self.target_data = np.load(self.target_file_path, mmap_mode='r', allow_pickle=True)[self.split_indices]
         else:
             self.input_data = np.load(self.input_file_path)[self.split_indices]
             self.target_data = np.load(self.target_file_path)[self.split_indices]
