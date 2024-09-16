@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'reproduce_results_long'
+savedir: 'reproduce_results_long_warmup'
 experiment_tag: 'thresholds'
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameter_fileRAZOR_SHWFS'
@@ -27,7 +27,7 @@ n_history: 20
 T: 5
 data_shape: 11
 device: 'cuda:0'
-warmup_ts: 1
+warmup_ts: 20
 contrast: False
 batch_size: 32
 

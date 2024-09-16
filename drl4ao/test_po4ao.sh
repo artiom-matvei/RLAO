@@ -12,11 +12,12 @@
 
 cd MAIN_CODE
 
-savedir='reproduce_results_long'
+savedir='reproduce_results_long_warmup'
 logpath="../../logs/"$savedir
 mkdir -p $logpath 
 
 source $HOME/projects/def-lplevass/parker09/drl4ao_env/bin/activate
-python $HOME/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/integrator_oopao_razor.py > ../../logs/$savedir/int_out.txt 2>&1
 python $HOME/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/mbrl_main.py > ../../logs/$savedir/po4ao_out.txt 2>&1
+python $HOME/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/integrator_oopao_razor.py > ../../logs/$savedir/int_out.txt 2>&1
+
 

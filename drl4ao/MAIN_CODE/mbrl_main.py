@@ -37,7 +37,7 @@ env.change_mag(4.5)
 # %%
 
 # if __name__=='__main__':
-for threshold in [0.01, 0.215789]:
+for threshold in [0.215789, 0.01]:
 
     env.wfs.threshold_cog = threshold
 
