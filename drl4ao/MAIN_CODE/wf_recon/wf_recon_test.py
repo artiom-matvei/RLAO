@@ -130,8 +130,10 @@ plt.show()
 
 # %%
 
+plt.style.use('ggplot')
+
 # plot losses
-tag = 'ema'
+tag = 'ema_big_dataset'
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
 val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
@@ -139,12 +141,17 @@ ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
 
 plt.plot(train_loss, label='Train Loss', color='k')
 plt.plot(val_loss, label='Val Loss', color='r')
-# plt.plot(ema_loss, label='ema loss', ls='--', c='k')
+plt.plot(ema_loss, label='ema loss', ls='--', c='k')
 
 plt.axvline(np.argmin(val_loss), color='k', ls='--', alpha=0.4, label='Best Model')
 
+# plt.axhline(0.0387)
+
 plt.yscale('log')
 plt.legend()
+
+# plt.xlim(80, 100)
+# plt.ylim(0.03, 0.05)
 
 plt.title('Training Loss of Wavefront Reconstructor')
 plt.xlabel('Epoch')
