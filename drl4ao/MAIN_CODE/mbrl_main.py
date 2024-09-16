@@ -13,7 +13,8 @@ import torch
 from torch import optim
 import numpy as np
 from PO4AO.conv_models_simple import EnsembleDynamics, ConvPolicy
-from PO4AO.util_simple import get_n_params, EfficientExperienceReplay, read_yaml_file
+from PO4AO.util_simple import get_n_params, EfficientExperienceReplay
+from ML_stuff.dataset_tools import read_yaml_file
 from torch.utils.tensorboard.writer import SummaryWriter
 from PO4AO.mbrl_funcsRAZOR import get_env,run,train_dynamics,train_policy
 from Plots.plots import save_plots
@@ -31,27 +32,15 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 env = get_env(args)
 
+env.change_mag(4)
 
 # %%
-# noise_mul = np.linspace(0, 1, 2)
 
-# for n in noise_mul:
-#     env.wfs.cam.readoutNoise = 9*n
+# if __name__=='__main__':
+for threshold in [0.01, 0.131]:
 
-#     env.tel*env.wfs
+    env.wfs.threshold_cog = threshold
 
-#     frame = env.wfs.cam.frame.copy()
-
-#     bins = np.arange(np.min(frame), np.max(frame))
-
-#     plt.hist(frame.flatten(), bins=bins, alpha=0.5, label=f'Noise:{9*n}')
-
-# plt.yscale('log')
-# plt.legend()
-# plt.show()
-# %%
-
-if __name__=='__main__':
 
     # Convert string parammeters to list
     # args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
@@ -59,8 +48,8 @@ if __name__=='__main__':
 
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s')
-    savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'
+    writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'_{threshold}')
+    savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'_{threshold}'
 
 
     os.makedirs(savedir, exist_ok=True)
@@ -71,7 +60,10 @@ if __name__=='__main__':
     Saves training states and results.
     :return: evals,reward_sums,env.LE_PSF
     """
-    env = get_env(args)
+    # env = get_env(args)
+    # env.change_mag(4)
+
+
    
     flt = env.F
     flt = torch.from_numpy(np.asarray(flt)).float()

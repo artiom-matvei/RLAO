@@ -1,6 +1,6 @@
 save_all_PSF: False
-savedir: 'many_threshold'
-experiment_tag: 'gains'
+savedir: 'reproduce_results'
+experiment_tag: 'thresholds'
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameter_fileRAZOR_SHWFS'
 
@@ -11,7 +11,7 @@ windSpeed: [2]
 windDirection: [0]
 altitude: [0]
 
-nLoop: 5000 #10000
+nLoop: 10000
 gainCL: 0.2
 gain_list: [0.15,0.2,0.25,0.3,0.35]
 frames_per_sec: 500
@@ -21,7 +21,7 @@ anim: False
 anim_len: 500
 
 initial_sigma: 0.2
-iters: 200
+iters: 20
 max_ts: 500
 n_history: 20
 T: 5
