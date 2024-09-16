@@ -26,11 +26,11 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 env = get_env(args)
 
-env.change_mag(4)
+env.change_mag(4.5)
 
 
 # for gainCL in args.gain_list:
-for threshold in [0.01, 0.131]:
+for threshold in [0.01, 0.215789]:
 
     env.wfs.threshold_cog = threshold
 
@@ -92,7 +92,7 @@ for threshold in [0.01, 0.131]:
     print(rewards)
     print("Saving Data")
     torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
-    torch.save(sr, os.path.join(savedir, "sr2plot.pt"))
+    torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
 
 
     # if args.anim:
@@ -193,4 +193,48 @@ for threshold in [0.01, 0.131]:
 
 # plt.imshow(pred[0,0,:,:].detach().numpy())
 # plt.show()
+# %%
+plt.style.use('ggplot')
+
+rl_low = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results/po4ao/20240915-214938_thresholds_20s_0.01/sr2plot.pt')
+rl_high = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results/po4ao/20240915-220218_thresholds_20s_0.131/sr2plot.pt')
+
+# int_low = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results/integrator/20240915-210935_thresholds_20s_0.01/sr2plot.pt')
+# int_high = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results/integrator/20240915-212415_thresholds_20s_0.131/sr2plot.pt')
+
+int_high = np.array([0.6272068069578972, 0.6101089753904848, 0.6466121299543616, 0.6156680442499712, 0.5975168685029444, 0.5645924791915994, 0.6135951834647645, 0.5938773426621287, 0.6281442138420543, 0.6060260610290502, 0.6427900938099987, 0.6067561657014292, 0.5962182234646175, 0.5848466731584152, 0.6166977710391496, 0.612063170573298, 0.603946121391644, 0.5721899937647568, 0.5785997720906566, 0.6240568186429183])
+int_low = np.array([0.3085460076971307, 0.29346112888697656, 0.277581243388001, 0.3003261896768564, 0.30046795740171467, 0.2882446577708787, 0.2604695290316118, 0.2750211906366203, 0.29278651507272035, 0.24276377135574356, 0.3006226846595084, 0.24657455688594143, 0.2824618668313091, 0.2689726298871343, 0.2700150266799032, 0.2266344915888839, 0.30294277338781284, 0.2899828868486627, 0.35164186520181884, 0.27791627269167446])
+plt.plot(rl_low, label='PO4AO - low threshold')
+plt.plot(rl_high, label='PO4AO - high threshold')
+
+x = np.arange(len(rl_low))
+
+
+mean_high = np.mean(int_high)
+mean_low = np.mean(int_low)
+
+sigma_high = np.std(int_high)
+sigma_low = np.std(int_low)
+
+y_1sigma_upper_high = np.full(len(x), mean_high + sigma_high)
+y_1sigma_lower_high = np.full(len(x), mean_high - sigma_high)
+y_2sigma_upper_high = np.full(len(x), mean_high + 2*sigma_high)
+y_2sigma_lower_high = np.full(len(x), mean_high - 2*sigma_high)
+
+y_1sigma_upper_low = np.full(len(x), mean_low + sigma_low)
+y_1sigma_lower_low = np.full(len(x), mean_low - sigma_low)
+y_2sigma_upper_low = np.full(len(x), mean_low + 2*sigma_low)
+y_2sigma_lower_low = np.full(len(x), mean_low - 2*sigma_low)
+
+plt.fill_between(x, y_2sigma_lower_high, y_2sigma_upper_high, alpha=0.3)
+plt.fill_between(x, y_1sigma_lower_high, y_1sigma_upper_high, alpha=0.5)
+
+
+plt.fill_between(x, y_2sigma_lower_low, y_2sigma_upper_low, alpha=0.3)
+plt.fill_between(x, y_1sigma_lower_low, y_1sigma_upper_low, alpha=0.5)
+
+
+plt.title('Mean Strehl of PO4AO')
+plt.legend()
+plt.show()
 # %%

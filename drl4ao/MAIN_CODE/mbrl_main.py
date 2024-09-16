@@ -32,12 +32,12 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 env = get_env(args)
 
-env.change_mag(4)
+env.change_mag(4.5)
 
 # %%
 
 # if __name__=='__main__':
-for threshold in [0.01, 0.131]:
+for threshold in [0.01, 0.215789]:
 
     env.wfs.threshold_cog = threshold
 

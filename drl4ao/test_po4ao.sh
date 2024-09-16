@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=1 # maximum cpu per task is 3.5 per gpus
 #SBATCH --gres=gpu:1
 #SBATCH --mem=40G                        # memory per node
-#SBATCH --time=00-04:59         # time (DD-HH:MM)
+#SBATCH --time=00-02:59         # time (DD-HH:MM)
 #SBATCH -e ../../logs/long_run/err_po4ao_reproduce.txt
 #SBATCH --account=def-lplevass
 #SBATCH --job-name=reproduce_po4ao_results
@@ -12,7 +12,7 @@
 
 cd MAIN_CODE
 
-savedir='reproduce_results'
+savedir='reproduce_results_long'
 logpath="../../logs/"$savedir
 mkdir -p $logpath 
 
