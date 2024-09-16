@@ -11,11 +11,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 # from parser_Configurations import Config, ConfigAction
 # from OOPAOEnv.OOPAOEnvRazor import OOPAO
-from PO4AO.util_simple import read_yaml_file #TorchWrapper, 
+from ML_stuff.dataset_tools import read_yaml_file #TorchWrapper, 
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env, get_phase_dataset
+from PO4AO.mbrl_funcsRAZOR import get_env
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
@@ -26,15 +26,20 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 env = get_env(args)
 
+env.change_mag(4)
 
-for gainCL in args.gain_list:
+
+# for gainCL in args.gain_list:
+for threshold in [0.01, 0.131]:
+
+    env.wfs.threshold_cog = threshold
+
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+str(gainCL)
+    savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+str(threshold)
     
     print('Start make env')
     os.makedirs(savedir, exist_ok=True)
-    
-    env.gainCL = gainCL
+
 
     print('Done change gain')
     # obj = env.reset()
@@ -74,7 +79,7 @@ for gainCL in args.gain_list:
         # LE_PSF, SE_PSF = env.render4plot(i)
         # env.render4plot(i)
 
-        print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+        print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
         print("SR: " +str(strehl))
         if (i+1) % 500 == 0:
             sr = env.calculate_strehl_AVG()
@@ -99,93 +104,93 @@ for gainCL in args.gain_list:
 
     print("Data Saved")
 # %%
-import torch
-import matplotlib.pyplot as plt
-import numpy as np
+# import torch
+# import matplotlib.pyplot as plt
+# import numpy as np
 
-plt.style.use('seaborn-v0_8')
+# plt.style.use('seaborn-v0_8')
 
-exp = '/home/parker09/projects/def-lplevass/parker09/drl4papyrus/logs/finer_gains/integrator'
+# exp = '/home/parker09/projects/def-lplevass/parker09/drl4papyrus/logs/finer_gains/integrator'
 
-x = []
+# x = []
 
-dirs = os.listdir(exp)
-
-
-
-idx = np.argsort([float(x.split('.')[0][-1] + '.' + x.split('.')[1]) for x in dirs])
-
-
-for i in idx:
-    try:
-        x = torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')
-        gain = float(dirs[i].split('.')[0][-1] + '.' + dirs[i].split('.')[1])
-        print(gain)
-        plt.plot(x, label=f'Gain:{gain:.2f}')
-
-    except:
-        continue
-
-plt.ylabel('Strehl Ratio')
-plt.legend()
-plt.show()
+# dirs = os.listdir(exp)
 
 
 
-# %%
-
-gains = [0.1 +0.05 * (i+1) for i in range(len(dirs))]
-strehl = [np.mean(torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')) for i in idx]
-serr = [np.std(torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')) for i in idx]
-# Create the error bar plot
-plt.errorbar(gains, strehl, yerr=serr, fmt='o', capsize=5, capthick=2, elinewidth=1)
-
-# Adding labels and title
-plt.xlabel('Integrator Gain')
-plt.ylabel('Strehl Ratio')
-plt.title('Average Integrator Performance vs Gain')
-
-# Display the plot
-plt.show()
-# %%
-env = get_env(args)
+# idx = np.argsort([float(x.split('.')[0][-1] + '.' + x.split('.')[1]) for x in dirs])
 
 
-fig, ax = plt.subplots(3,5, figsize=(20,15))
+# for i in idx:
+#     try:
+#         x = torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')
+#         gain = float(dirs[i].split('.')[0][-1] + '.' + dirs[i].split('.')[1])
+#         print(gain)
+#         plt.plot(x, label=f'Gain:{gain:.2f}')
 
-print('Starting Loop')
+#     except:
+#         continue
 
-phase, dataset = get_phase_dataset(env, 5)
+# plt.ylabel('Strehl Ratio')
+# plt.legend()
+# plt.show()
 
-for i in range(5):
 
-    cax1 = ax[0,i].imshow(phase[:,:,i])
-    cax2 = ax[1,i].imshow(dataset['dm'][i])
-    cax3 = ax[2,i].imshow(dataset['wfs'][i])
 
-    ax[0,i].axis('off')
-    ax[1,i].axis('off')
-    ax[2,i].axis('off')
+# # %%
 
-    ax[0,i].set_title('Random Phase', size=15)
-    ax[1,i].set_title('Phase Projected onto DM', size=15)
-    ax[2,i].set_title('WFS Image', size=15)
+# gains = [0.1 +0.05 * (i+1) for i in range(len(dirs))]
+# strehl = [np.mean(torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')) for i in idx]
+# serr = [np.std(torch.load(exp+'/'+dirs[i]+'/sr2plot.pt')) for i in idx]
+# # Create the error bar plot
+# plt.errorbar(gains, strehl, yerr=serr, fmt='o', capsize=5, capthick=2, elinewidth=1)
 
-plt.tight_layout()
+# # Adding labels and title
+# plt.xlabel('Integrator Gain')
+# plt.ylabel('Strehl Ratio')
+# plt.title('Average Integrator Performance vs Gain')
 
-plt.show()
-# %%
+# # Display the plot
+# plt.show()
+# # %%
+# env = get_env(args)
 
-from PO4AO.conv_models_simple import Reconstructor
 
-net = Reconstructor(1,1,11, env.xvalid, env.yvalid)
+# fig, ax = plt.subplots(3,5, figsize=(20,15))
 
-wfs_img = torch.from_numpy(dataset['wfs'][0]).float().unsqueeze(0).unsqueeze(0)
+# print('Starting Loop')
 
-pred = net(wfs_img)
+# phase, dataset = get_phase_dataset(env, 5)
 
-print(f'Input dims: {wfs_img.shape}, Output dims: {pred.shape}')
+# for i in range(5):
 
-plt.imshow(pred[0,0,:,:].detach().numpy())
-plt.show()
+#     cax1 = ax[0,i].imshow(phase[:,:,i])
+#     cax2 = ax[1,i].imshow(dataset['dm'][i])
+#     cax3 = ax[2,i].imshow(dataset['wfs'][i])
+
+#     ax[0,i].axis('off')
+#     ax[1,i].axis('off')
+#     ax[2,i].axis('off')
+
+#     ax[0,i].set_title('Random Phase', size=15)
+#     ax[1,i].set_title('Phase Projected onto DM', size=15)
+#     ax[2,i].set_title('WFS Image', size=15)
+
+# plt.tight_layout()
+
+# plt.show()
+# # %%
+
+# from PO4AO.conv_models_simple import Reconstructor
+
+# net = Reconstructor(1,1,11, env.xvalid, env.yvalid)
+
+# wfs_img = torch.from_numpy(dataset['wfs'][0]).float().unsqueeze(0).unsqueeze(0)
+
+# pred = net(wfs_img)
+
+# print(f'Input dims: {wfs_img.shape}, Output dims: {pred.shape}')
+
+# plt.imshow(pred[0,0,:,:].detach().numpy())
+# plt.show()
 # %%
