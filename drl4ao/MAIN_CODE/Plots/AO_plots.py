@@ -32,6 +32,13 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
+env.wfs.cam.readoutNoise = 0
+env.wfs.cam.photonNoise = False
+env.wfs.cam.darkCurrent = 0
+env.wfs.cam.FWC = None
+env.change_mag(3)
+
+
 # env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 # %%
@@ -53,6 +60,36 @@ def wfs_image(env, with_atm=True, seed=0):
                      vmin=0, vmax=np.percentile(frame, 99.5))
     ax.axis('off')
     plt.show()
+
+
+def wfs_vector(env):
+    frame = env.wfs.cam.frame.copy()
+    slopes = env.wfs.signal_2D.copy()
+
+    image_size = frame.shape[0]
+    grid_size = slopes.shape[1]
+
+    spot_spacing = image_size // grid_size  # Distance between spots on the grid
+
+    # Generate grid coordinates (X, Y) for the 10x10 grid
+    x = np.linspace(spot_spacing // 2, image_size - spot_spacing // 2, grid_size)
+    y = np.linspace(spot_spacing // 2, image_size - spot_spacing // 2, grid_size)
+    X, Y = np.meshgrid(x, y)
+
+    x_slopes = slopes[:grid_size, :]
+    y_slopes = slopes[grid_size:, :]
+
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    ax.imshow(frame, cmap='inferno',\
+                     vmin=0, vmax=np.percentile(frame, 99.5))
+
+    ax.quiver(X, Y, x_slopes, y_slopes, color='white', scale=5e2)
+    ax.axis('off')
+
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
 
 
 def slope_map(env, with_atm=True, seed=0):
@@ -296,6 +333,56 @@ def shwfs_1D():
     ax.set_ylabel('y')
 
     # ax.axis('off')
+    plt.show()
+
+# %%
+def wf_recon_test(env, reconstructor):
+
+
+    wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
+                        min_scale=1e-6, max_scale=1e-6)
+
+    reconstructor.eval()
+    # Make predictions
+    obs = torch.tensor(wfsf).float().unsqueeze(1)
+
+    with torch.no_grad():
+        pred = reconstructor(obs)
+        # pred_OPD = OPD_model(network(obs), modes, res)
+
+
+    # Run ground truth commands through the model
+
+    # Reshape commands into image
+    cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
+
+    # gt_opd = OPD_model(torch.tensor(cmd_img).unsqueeze(1), modes, res)
+
+
+    fig, ax = plt.subplots(3,3, figsize=(10,10))
+
+    vrange = 3
+
+    for i in range(3):
+        # cax1 = ax[0,i].imshow(wfsf[i])
+        cax2 = ax[0,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
+        cax3 = ax[1,i].imshow(np.arcsinh(cmd_img[i] / 1e-6), vmin=-vrange, vmax=vrange)
+        cax4 = ax[2,i].imshow(np.arcsinh(cmd_img[i] / 1e-6) - pred[i].squeeze(0).detach().numpy(),\
+                                                                    vmin=-vrange, vmax=vrange)
+
+
+        ax[0,i].axis('off')
+        ax[1,i].axis('off')
+        ax[2,i].axis('off')
+        # ax[3,i].axis('off')
+
+        # ax[0,i].set_title('Input WFS Image', size=15)
+        ax[0,i].set_title('Reconstructed Phase', size=15)
+        ax[1,i].set_title('Ground Truth Phase', size=15)
+        ax[2,i].set_title('Difference', size=15)
+
+    # plt.tight_layout()
+
     plt.show()
 
 # %%

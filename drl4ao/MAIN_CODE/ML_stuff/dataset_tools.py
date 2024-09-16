@@ -79,18 +79,21 @@ def find_main_directory(path):
     return None  # Return None if the "main" directory is not found
 
 
-def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8, savedir='', tag=''):
+def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8, savedir='', tag='', to_file=False):
     """Creates a pandas DataFrame with wavefront sensor measurements
     and corresponding mirror shapes, generated from normally distributed
     dm coefficients."""
 
-    # dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
-    # wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
+    if to_file:
 
-    dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
-                                                shape=(size*num_scale, *env.dm.coefs.shape))
-    wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
+        dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
+                                                    shape=(size*num_scale, *env.dm.coefs.shape))
+        wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
                                                 shape=(size*num_scale, *env.wfs.cam.frame.shape))
+
+    else:
+        dm_commands = np.zeros((size*num_scale, *env.dm.coefs.shape))
+        wfs_frames = np.zeros((size*num_scale, *env.wfs.cam.frame.shape))
 
     frame = 0
 
@@ -119,9 +122,9 @@ def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8,
                 print(f"Generated {frame} samples in {time.time()-start} seconds")
                 start = time.time()
 
-
-    dm_commands.flush()
-    wfs_frames.flush()
+    if to_file:
+        dm_commands.flush()
+        wfs_frames.flush()
     return wfs_frames, dm_commands
 
 
