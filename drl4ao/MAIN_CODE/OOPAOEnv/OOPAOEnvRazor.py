@@ -116,11 +116,19 @@ class OOPAO(gym.Env):
 
         #%% -----------------------     TELESCOPE   ----------------------------------
 
-        # create the Telescope object
-        self.tel = Telescope(resolution          = param['resolution'],\
+        if wfs_type == "pyramid":
+
+            self.tel = Telescope(resolution      = 64*6,\
                              diameter            = param['diameter'],\
                              samplingTime        = param['samplingTime'],\
                              centralObstruction  = param['centralObstruction'])
+
+        else:
+        # create the Telescope object
+            self.tel = Telescope(resolution          = param['resolution'],\
+                                diameter            = param['diameter'],\
+                                samplingTime        = param['samplingTime'],\
+                                centralObstruction  = param['centralObstruction'])
 
         #%% -----------------------     NGS   ----------------------------------
         # create the Source object
@@ -203,13 +211,22 @@ class OOPAO(gym.Env):
 
         if wfs_type == "pyramid":
 
-            self.wfs = Pyramid(nSubap                = param['nSubaperture'],\
-                            telescope             = self.tel,\
-                            modulation            = param['modulation'],\
-                            lightRatio            = param['lightThreshold'],\
-                            n_pix_separation      = param['n_pix_separation'],\
-                            psfCentering          = param['psfCentering'],\
-                            postProcessing        = param['postProcessing'])
+            self.wfs = Pyramid(nSubap = 64, 
+                            telescope = self.tel, 
+                            modulation = param['modulation'], 
+                            lightRatio = 0.95, 
+                            psfCentering = param['psfCentering'], 
+                            postProcessing = param['postProcessing'])
+
+            self.wfs.cam.sensor = 'CMOS'
+            self.wfs.cam.FWC = 10000
+            self.wfs.cam.bits = 10
+
+            self.wfs.cam.QE = 0.56
+            self.wfs.cam.darkCurrent = 5
+
+            self.wfs.cam.integrationTime = param['samplingTime']
+
 
         elif wfs_type == "shackhartmann":
 
@@ -232,22 +249,27 @@ class OOPAO(gym.Env):
             self.wfs.cam.integrationTime = param['samplingTime']
 
 
+        print('check 1')
 
         self.tel*self.wfs
 
         #%% ZERNIKE Polynomials
         # create Zernike Object
+        print('check 2')
         Z = Zernike(self.tel,50)
         # compute polynomials for given telescope
         Z.computeZernike(self.tel)
 
+        print('check 3')
         # mode to command matrix to project Zernike Polynomials on DM
         M2C_zernike = np.linalg.pinv(np.squeeze(self.dm.modes[self.tel.pupilLogical,:]))@Z.modes
 
+        print('check 4')
         # show the first 10 zernikes
         self.dm.coefs = M2C_zernike[:,:10]
         self.tel*self.dm
         displayMap(self.tel.OPD)
+        print('check 5')
 
         #%% to manually measure the interaction matrix
 
@@ -257,6 +279,8 @@ class OOPAO(gym.Env):
 
         #%%
         M2C_zonal = np.eye(self.dm.nValidAct)
+
+        print('check 5.5')
         # zonal interaction matrix
         calib_zonal = InteractionMatrix(  ngs            = self.source,\
                                           atm            = self.atm,\
@@ -268,7 +292,7 @@ class OOPAO(gym.Env):
                                           nMeasurements  = 25,\
                                           noise          = 'off')
 
-    
+        print('check 6')
 
 
         # Modal interaction matrix

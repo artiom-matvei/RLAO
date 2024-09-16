@@ -30,14 +30,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 savedir = os.path.dirname(__file__)
 
-env = get_env(args)
+env = get_env(args, wfs_type='pyramid')
 
-env.wfs.cam.readoutNoise = 0
-env.wfs.cam.photonNoise = False
-env.wfs.cam.darkCurrent = 0
-env.wfs.cam.FWC = None
-env.change_mag(3)
-
+# env.wfs.cam.readoutNoise = 0
+# env.wfs.cam.photonNoise = False
+# env.wfs.cam.darkCurrent = 0
+# env.wfs.cam.FWC = None
 
 # env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
@@ -176,6 +174,7 @@ def basis_grid(env, len=4, modal=True):
         env.dm.coefs = np.eye((env.dm.nValidAct))[:,:len**2]
         env.tel*env.dm
         displayMap(env.tel.OPD - env.tel.OPD.mean())
+
 
 def basis_distribution(env):
     size = 100
@@ -385,4 +384,46 @@ def wf_recon_test(env, reconstructor):
 
     plt.show()
 
+
+def rmse_reconstruct(env, reconstructor, size=100, gain=0.2):
+
+    reconstructor.eval()
+    env.dm.coefs = 0
+    env.tel*env.dm
+
+    rmse_network = np.zeros(size)
+    rmse_integrator = np.zeros(size)
+
+    for i in range(size):
+
+        gt = np.random.randn(*env.dm.coefs.shape)*1e-6
+        env.dm.coefs = gt.copy()
+        env.tel*env.wfs
+
+        wfsf = env.wfs.cam.frame.copy()
+        
+        integrator = gain * np.matmul(env.reconstructor, env.wfs.signal)
+
+
+        obs = torch.tensor(wfsf).float().unsqueeze(0).unsqueeze(0)
+        with torch.no_grad():
+            pred = reconstructor(obs)
+            pred = env.img_to_vec(pred.squeeze(0).squeeze(0))
+
+        rmse_network[i] = np.sqrt(np.mean((np.arcsinh(gt / 1e-6) - pred.squeeze(0).detach().numpy())**2))
+        rmse_integrator[i] = np.sqrt(np.mean((np.arcsinh(gt / 1e-6) - np.arcsinh(integrator / 1e-6))**2))
+
+        if i+1 % 10 == 0:
+            print(rmse_integrator[i], rmse_network[i])
+        
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    ax.plot(rmse_network, label='Network')
+    ax.plot(rmse_integrator, label='Integrator')
+
+    ax.set_title('RMSE of Network vs Integrator')
+    ax.legend()
+    plt.show()
+
+
+    return rmse_network, rmse_integrator
 # %%
