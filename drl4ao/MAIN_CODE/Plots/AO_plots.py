@@ -32,6 +32,13 @@ savedir = os.path.dirname(__file__)
 
 env = get_env(args)
 
+env.wfs.cam.readoutNoise = 0
+env.wfs.cam.photonNoise = False
+env.wfs.cam.darkCurrent = 0
+env.wfs.cam.FWC = None
+env.change_mag(3)
+
+
 # env.wfs.reference_slopes_maps = env.wfs.signal_2D.copy()
 
 # %%
