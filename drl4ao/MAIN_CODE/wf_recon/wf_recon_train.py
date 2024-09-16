@@ -28,6 +28,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 savedir = os.path.dirname(__file__)
 
+
 env = get_env(args)
 
 
@@ -115,9 +116,12 @@ test_indices = indices[train_size + val_size:]
 input_file_path = data_dir_path+'/wfs_frames_big_boy.npy'
 target_file_path = data_dir_path+'/dm_cmds_big_boy.npy'
 
-D_train = FileDataset(input_file_path, target_file_path, train_indices)
-D_test = FileDataset(input_file_path, target_file_path, test_indices)
-D_val = FileDataset(input_file_path, target_file_path, val_indices)
+dm_shape = env.dm.coefs.shape
+wfs_shape=env.wfs.cam.frame.shape
+
+D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
+D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
+D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
 
 with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")

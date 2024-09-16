@@ -30,16 +30,19 @@ class ImageDataset(Dataset):
         return input_image, target_image
 
 class FileDataset(Dataset):
-    def __init__(self, input_file_path, target_file_path, split_indices, scale=1e-6, use_mmap=True):
+    def __init__(self, input_file_path, target_file_path, split_indices, dm_shape, wfs_shape, scale=1e-6, size=20000, use_mmap=True):
         self.input_file_path = input_file_path
         self.target_file_path = target_file_path
         self.split_indices = split_indices
         self.scale = scale
         self.use_mmap = use_mmap
+        self.size = size
+        self.dm_shape = dm_shape
+        self.wfs_shape = wfs_shape
 
         if use_mmap:
-            self.input_data = np.load(self.input_file_path, mmap_mode='r', allow_pickle=True)[self.split_indices]
-            self.target_data = np.load(self.target_file_path, mmap_mode='r', allow_pickle=True)[self.split_indices]
+            self.input_data = np.memmap(self.input_file_path, dtype='float32', mode='r', shape=(self.size, *self.wfs_shape))[self.split_indices]
+            self.target_data = np.memmap(self.target_file_path, dtype='float32', mode='r',shape=(self.size, *self.dm_shape) )[self.split_indices]
         else:
             self.input_data = np.load(self.input_file_path)[self.split_indices]
             self.target_data = np.load(self.target_file_path)[self.split_indices]
