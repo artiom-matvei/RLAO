@@ -1,6 +1,6 @@
 save_all_PSF: False
 savedir: 'grid_search'
-experiment_tag: 'thresholds'
+experiment_tag: 'delay'
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameter_fileRAZOR_SHWFS'
 
@@ -20,14 +20,14 @@ delay: 0
 anim: False
 anim_len: 500
 
-initial_sigma: 0.2
-iters: 100
+initial_sigma: 0.05
+iters: 20
 max_ts: 500
 n_history: 20
 T: 5
 data_shape: 11
 device: 'cuda:0'
-warmup_ts: 20
+warmup_ts: 1
 contrast: False
 batch_size: 32
 

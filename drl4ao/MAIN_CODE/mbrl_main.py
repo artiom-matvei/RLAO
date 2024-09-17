@@ -30,121 +30,123 @@ import matplotlib.pyplot as plt
 # %%
 args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
-env = get_env(args)
 
-env.change_mag(4.5)
 
 # %%
 
 # if __name__=='__main__':
-for threshold in [0.215789, 0.01]:
+for delay in [0, 3]:
 
-    env.wfs.threshold_cog = threshold
+    args.delay = delay
+    env = get_env(args)
 
-
-    # Convert string parammeters to list
-    # args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
-    args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
-
-
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'_{threshold}')
-    savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'_{threshold}'
+    env.wfs.threshold_cog = 0.0745
+    env.gainCL = 0.225
 
 
-    os.makedirs(savedir, exist_ok=True)
-    # args.save(savedir+"/arguments"+'_.json')
-
-    """Main function that initiates the enviroment, sets up the policy and the dynamics model neural networks (NN).
-    Contains the experiment main loop, running the system and the training phase for each NN.
-    Saves training states and results.
-    :return: evals,reward_sums,env.LE_PSF
-    """
-    # env = get_env(args)
-    # env.change_mag(4)
+    for ws in [[2], [6]]:
+        env.atm.windSpeed = ws
+        env.atm.generateNewPhaseScreen(17)
 
 
-   
-    flt = env.F
-    flt = torch.from_numpy(np.asarray(flt)).float()
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'delay_{delay}_ws_{ws[0]}')
+        savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'delay_{delay}_ws_{ws[0]}'
 
-    replay = EfficientExperienceReplay((args.data_shape,args.data_shape), (args.data_shape,args.data_shape))
+
+        os.makedirs(savedir, exist_ok=True)
+        # args.save(savedir+"/arguments"+'_.json')
+
+        """Main function that initiates the enviroment, sets up the policy and the dynamics model neural networks (NN).
+        Contains the experiment main loop, running the system and the training phase for each NN.
+        Saves training states and results.
+        :return: evals,reward_sums,env.LE_PSF
+        """
+        # env = get_env(args)
+        # env.change_mag(4)
+
+
     
-    dynamics = EnsembleDynamics(env.xvalid, env.yvalid, args.n_history) 
-    policy = ConvPolicy(env.xvalid, env.yvalid, args.initial_sigma, flt, args.n_history)
+        flt = env.F
+        flt = torch.from_numpy(np.asarray(flt)).float()
 
-    dynamics_optimizer = optim.Adam(dynamics.parameters())
-    policy_optimizer = optim.Adam(policy.parameters())
-    # device = torch.device(args.gpu_device)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    args.gpu_device = device
-    
-    #print('params', get_n_params(dynamics), get_n_params(policy))
-
-    sigma = args.initial_sigma
-
-
-    reward_sums = torch.zeros(args.iters)
-    evals = torch.zeros(args.iters)
-    past_obs = None
-    past_act = None
-
-    iteration = 0
-    obs = None
-
-    for i in range(args.iters):
+        replay = EfficientExperienceReplay((args.data_shape,args.data_shape), (args.data_shape,args.data_shape))
         
-        start = time.time()
+        dynamics = EnsembleDynamics(env.xvalid, env.yvalid, args.n_history) 
+        policy = ConvPolicy(env.xvalid, env.yvalid, args.initial_sigma, flt, args.n_history)
+
+        dynamics_optimizer = optim.Adam(dynamics.parameters())
+        policy_optimizer = optim.Adam(policy.parameters())
+        # device = torch.device(args.gpu_device)
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration)
-       
-        if reward_sum < -46:
-            converged = 1
-        reward_sums[i] = reward_sum
-        evals[i] =  strehl
-
-        dyn_loss = 0
-        pol_loss = 0
-
-        if i == args.warmup_ts -1: # During warm-up phase
-            dyn_loss = train_dynamics(args.n_history,args.max_ts,args.batch_size,dynamics, dynamics_optimizer, replay, dyn_iters=100,device=args.gpu_device)
-            # Ensure all operations on GPU are finished before proceeding
-            if args.gpu_device == 'cuda':
-                torch.cuda.synchronize()
-            pol_loss = train_policy(policy_optimizer, policy, dynamics, replay,args.gpu_device,args.n_history, args.max_ts, args.batch_size,args.T, pol_iters=60)
-        if i > args.warmup_ts -1: # After warm-up phase, until the end of the experiment
-            dyn_loss = train_dynamics(args.n_history,args.max_ts,args.batch_size,dynamics, dynamics_optimizer, replay, dyn_iters=10,device=args.gpu_device)
-            # Ensure all operations on GPU are finished before proceeding
-            if args.gpu_device == 'cuda':
-                torch.cuda.synchronize()
+        args.gpu_device = device
         
-            pol_loss = train_policy(policy_optimizer, policy, dynamics, replay,args.gpu_device,args.n_history, args.max_ts, args.batch_size,args.T, pol_iters=7)
-            # Ensure all operations on GPU are finished before proceeding
-            if args.gpu_device == 'cuda':
-                torch.cuda.synchronize()
+        #print('params', get_n_params(dynamics), get_n_params(policy))
 
-        # Save training results for this Episode
+        sigma = args.initial_sigma
 
-        writer.add_scalar('train/pol_loss', pol_loss, i)          
-        writer.add_scalar('train/dyn_loss', dyn_loss, i)      
-        writer.add_scalar('train/strehl', strehl, i)
-        writer.add_scalar('train/reward_sum', reward_sum, i)
-        print(f'Iteration (Episode) {i} complete ({time.time() - start:.2f}s). \n\t dyn:{dyn_loss:.4f} pol:{pol_loss:.4f} \n\t strehl:{strehl:.3f} reward:{reward_sum:.3f}')
+
+        reward_sums = torch.zeros(args.iters)
+        evals = torch.zeros(args.iters)
+        past_obs = None
+        past_act = None
+
+        iteration = 0
+        obs = None
+
+        for i in range(args.iters):
+            
+            start = time.time()
+            
+            strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration)
         
-        sigma -= (args.initial_sigma / args.warmup_ts)
-        sigma = max(0, sigma)
+            if reward_sum < -46:
+                converged = 1
+            reward_sums[i] = reward_sum
+            evals[i] =  strehl
 
-        if i % 10 == 0: # Save state every 10 iterations
-            torch.save(dynamics.state_dict(), os.path.join(savedir, f"dynamics_{i}.pt"))
-            torch.save(policy.state_dict(), os.path.join(savedir, f"policy_{i}.pt"))
-            torch.save(rewards, os.path.join(savedir, "rewards.pt"))
-            torch.save(evals, os.path.join(savedir, "evals.pt"))
+            dyn_loss = 0
+            pol_loss = 0
 
-    # env.render4plot(15) # PSF images
+            if i == args.warmup_ts -1: # During warm-up phase
+                dyn_loss = train_dynamics(args.n_history,args.max_ts,args.batch_size,dynamics, dynamics_optimizer, replay, dyn_iters=100,device=args.gpu_device)
+                # Ensure all operations on GPU are finished before proceeding
+                if args.gpu_device == 'cuda':
+                    torch.cuda.synchronize()
+                pol_loss = train_policy(policy_optimizer, policy, dynamics, replay,args.gpu_device,args.n_history, args.max_ts, args.batch_size,args.T, pol_iters=60)
+            if i > args.warmup_ts -1: # After warm-up phase, until the end of the experiment
+                dyn_loss = train_dynamics(args.n_history,args.max_ts,args.batch_size,dynamics, dynamics_optimizer, replay, dyn_iters=10,device=args.gpu_device)
+                # Ensure all operations on GPU are finished before proceeding
+                if args.gpu_device == 'cuda':
+                    torch.cuda.synchronize()
+            
+                pol_loss = train_policy(policy_optimizer, policy, dynamics, replay,args.gpu_device,args.n_history, args.max_ts, args.batch_size,args.T, pol_iters=7)
+                # Ensure all operations on GPU are finished before proceeding
+                if args.gpu_device == 'cuda':
+                    torch.cuda.synchronize()
 
-    print("Saving Data")
-    save_plots(savedir,evals,reward_sums,env.LE_PSF) #
-    print("Data Saved")
+            # Save training results for this Episode
+
+            writer.add_scalar('train/pol_loss', pol_loss, i)          
+            writer.add_scalar('train/dyn_loss', dyn_loss, i)      
+            writer.add_scalar('train/strehl', strehl, i)
+            writer.add_scalar('train/reward_sum', reward_sum, i)
+            print(f'Iteration (Episode) {i} complete ({time.time() - start:.2f}s). \n\t dyn:{dyn_loss:.4f} pol:{pol_loss:.4f} \n\t strehl:{strehl:.3f} reward:{reward_sum:.3f}')
+            
+            sigma -= (args.initial_sigma / args.warmup_ts)
+            sigma = max(0, sigma)
+
+            if (i+1) % 10 == 0: # Save state every 10 iterations
+                torch.save(dynamics.state_dict(), os.path.join(savedir, f"dynamics_{i+1}.pt"))
+                torch.save(policy.state_dict(), os.path.join(savedir, f"policy_{i+1}.pt"))
+                torch.save(rewards, os.path.join(savedir, "rewards.pt"))
+                torch.save(evals, os.path.join(savedir, "evals.pt"))
+
+        # env.render4plot(15) # PSF images
+
+        print("Saving Data")
+        save_plots(savedir,evals,reward_sums,env.LE_PSF) #
+        print("Data Saved")
 # %%
