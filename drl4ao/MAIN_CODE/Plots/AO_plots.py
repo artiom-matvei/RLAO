@@ -30,7 +30,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 savedir = os.path.dirname(__file__)
 
-env = get_env(args, wfs_type='pyramid')
+env = get_env(args)
 
 # env.wfs.cam.readoutNoise = 0
 # env.wfs.cam.photonNoise = False

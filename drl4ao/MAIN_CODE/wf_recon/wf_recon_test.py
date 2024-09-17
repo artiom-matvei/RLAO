@@ -73,7 +73,7 @@ wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/best_model_OL.pt',map_location=device)
+checkpoint = torch.load(savedir+'/best_model_20k.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
