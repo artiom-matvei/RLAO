@@ -29,7 +29,7 @@ def get_env(args, gainCL=0.2, wfs_type='shackhartmann'):
     env = OOPAO()
     env.set_params_file(args.param_file,args.oopao_path) # set parameter file
     env.set_params(args, wfs_type, gainCL=gainCL)   #sets env parameter file
-    if args.delay < 0:
+    if args.delay > 0:
         env = TimeDelayEnv(env, args.delay)
     return TorchWrapper(env)
 

@@ -30,26 +30,26 @@ class TimeDelayEnv(gym.Wrapper):
         super(TimeDelayEnv, self).__init__(env)
         self._env = env       
         self.d = delay
-        self.action_buffer = [np.zeros(env.action_space.shape)] * delay
+        self.action_buffer = [np.zeros((self._env.nActuator, self._env.nActuator))] * delay
         
 
-    def reset(self, new_atmos = True):
-        obs = self._env.reset(new_atmos)
-        self.action_buffer = [np.zeros(self._env.action_space.shape)] * self.d
+    def reset(self):
+        obs = self._env.reset()
+        self.action_buffer = [np.zeros((self._env.nActuator, self._env.nActuator))] * self.d
         return obs
 
     def reset_soft(self):
         obs = self._env.reset_soft()
-        self.action_buffer = [np.zeros(self._env.action_space.shape)] * self.d
+        self.action_buffer = [np.zeros((self._env.nActuator, self._env.nActuator))] * self.d
         return obs    
 
-    def step(self, action):
+    def step(self, i, action):
         self.action_buffer.append(action)
-        obs, reward, done, info = self._env.step(self.action_buffer[0])
+        obs, reward, strehl, done, info = self._env.step(i, self.action_buffer[0])
 
         del self.action_buffer[0]
 
-        return obs, reward, done, info
+        return obs, reward, strehl, done, info
 
 
 class EfficientExperienceReplay():

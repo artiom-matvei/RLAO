@@ -24,82 +24,79 @@ args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
 #%%
 
-env = get_env(args)
 
-env.change_mag(4.5)
+args.nLoop = 500
 
+for delay in [0, 3, 6]:
 
-# for gainCL in args.gain_list:
-for threshold in [0.01, 0.215789]:
+    args.delay = delay
+    env = get_env(args)
 
-    env.wfs.threshold_cog = threshold
+    env.wfs.threshold_cog = 0.0745
+    env.gainCL = 0.225
+    # env.change_mag(4.5)
+    # env.atm.r0 = 0.1
 
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+str(threshold)
-    
-    print('Start make env')
-    os.makedirs(savedir, exist_ok=True)
-
-
-    print('Done change gain')
-    # obj = env.reset()
-
-    # print(type(env))
-    # print(obj)
-
-    # env.render(1)
-    print("Running loop...")
-
-    LE_PSFs = []
-    SE_PSFs = []
-    SRs = []
-    rewards = []
-    accu_reward = 0
-
-    obs = env.reset_soft()
-
-    # if args.anim:
-
-    #     ATM_OPD = np.zeros((args.anim_len,) + env.atm.OPD.copy().shape)
-    #     RESIDUALS = np.zeros((args.anim_len,) + env.tel.OPD.copy().shape)
-    #     MIRROR_OPD = np.zeros((args.anim_len,) + env.dm.OPD.copy().shape)
-
-    #     env.tel.computePSF(2*2, 325*2)
-    #     SE_PSF = np.zeros((args.anim_len,) + env.tel.PSF_norma_zoom.copy().shape)
-    for i in range(args.nLoop):
-        a=time.time()
-        # print(env.gainCL)
-        action = env.gainCL * obs #env.integrator()
-        obs, reward,strehl, done, info = env.step(i,action)  
-        accu_reward+= reward
-
-        b= time.time()
-        print('Elapsed time: ' + str(b-a) +' s')
-        # LE_PSF, SE_PSF = env.render(i)
-        # LE_PSF, SE_PSF = env.render4plot(i)
-        # env.render4plot(i)
-
-        print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-        print("SR: " +str(strehl))
-        if (i+1) % 500 == 0:
-            sr = env.calculate_strehl_AVG()
-            SRs.append(sr)
-            rewards.append(accu_reward)
-            accu_reward = 0
+    # for gainCL in args.gain_list:
 
 
-    print(SRs)
-    print(rewards)
-    print("Saving Data")
-    torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
-    torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+
+    for ws in [[2], [6]]:
+        env.atm.windSpeed = ws
+        env.atm.generateNewPhaseScreen(17)
+
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'delay_{delay}_ws_{ws[0]}'
+        
+        print('Start make env')
+        os.makedirs(savedir, exist_ok=True)
 
 
-    # if args.anim:
-    #     np.save(savedir+'/atm_opd', ATM_OPD)
-    #     np.save(savedir+'/residuals', RESIDUALS)
-    #     np.save(savedir+'/mirror_shape', MIRROR_OPD)
-    #     np.save(savedir+'/psf', SE_PSF)
+        print('Done change gain')
+        # obj = env.reset()
+
+        # print(type(env))
+        # print(obj)
+
+        # env.render(1)
+        print("Running loop...")
+
+        LE_PSFs= []
+        SE_PSFs = []
+        SRs = []
+        rewards = []
+        accu_reward = 0
+
+        obs = env.reset_soft()
+
+        for i in range(args.nLoop):
+            a=time.time()
+            # print(env.gainCL)
+            action = env.gainCL * obs #env.integrator()
+            obs, reward,strehl, done, info = env.step(i,action)  
+            accu_reward+= reward
+
+            b= time.time()
+            print('Elapsed time: ' + str(b-a) +' s')
+            # LE_PSF, SE_PSF = env.render(i)
+            # LE_PSF, SE_PSF = env.render4plot(i)
+            # env.render4plot(i)
+
+            print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+            print("SR: " +str(strehl))
+            if (i+1) % 500 == 0:
+                sr = env.calculate_strehl_AVG()
+                SRs.append(sr)
+                rewards.append(accu_reward)
+                accu_reward = 0
+
+
+        print(f'Delay: {delay}, wind speed: {ws}, Mean SR: {SRs[0]}')
+        print(rewards)
+        print("Saving Data")
+        torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+        torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+
 
 
     print("Data Saved")

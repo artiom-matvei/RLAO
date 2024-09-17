@@ -248,28 +248,21 @@ class OOPAO(gym.Env):
 
             self.wfs.cam.integrationTime = param['samplingTime']
 
-
-        print('check 1')
-
         self.tel*self.wfs
 
         #%% ZERNIKE Polynomials
         # create Zernike Object
-        print('check 2')
         Z = Zernike(self.tel,50)
         # compute polynomials for given telescope
         Z.computeZernike(self.tel)
 
-        print('check 3')
         # mode to command matrix to project Zernike Polynomials on DM
         M2C_zernike = np.linalg.pinv(np.squeeze(self.dm.modes[self.tel.pupilLogical,:]))@Z.modes
 
-        print('check 4')
         # show the first 10 zernikes
         self.dm.coefs = M2C_zernike[:,:10]
         self.tel*self.dm
         displayMap(self.tel.OPD)
-        print('check 5')
 
         #%% to manually measure the interaction matrix
 
@@ -280,7 +273,6 @@ class OOPAO(gym.Env):
         #%%
         M2C_zonal = np.eye(self.dm.nValidAct)
 
-        print('check 5.5')
         # zonal interaction matrix
         calib_zonal = InteractionMatrix(  ngs            = self.source,\
                                           atm            = self.atm,\
@@ -291,8 +283,6 @@ class OOPAO(gym.Env):
                                           stroke         = stroke,\
                                           nMeasurements  = 25,\
                                           noise          = 'off')
-
-        print('check 6')
 
 
         # Modal interaction matrix
