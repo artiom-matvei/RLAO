@@ -133,8 +133,8 @@ def OPD_model(dm_cmd, modes, res):
     return dm_opd
 
 def linear_reconstructor(env, opd=False, seed=0):
-    # env.atm.generateNewPhaseScreen(seed=seed)
-    # env.tel*env.wfs
+    env.atm.generateNewPhaseScreen(seed=seed)
+    env.tel*env.wfs
 
     integrator = np.matmul(env.reconstructor, env.wfs.signal)
 
@@ -143,11 +143,19 @@ def linear_reconstructor(env, opd=False, seed=0):
     if opd:
         reconstructor = OPD_model(reconstructor, env.dm.modes, env.dm.resolution)[0] * env.tel.pupil
 
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    im1 = ax.imshow(reconstructor, cmap='inferno')
-    fig.colorbar(im1)
-    ax.axis('off')
-    plt.show()
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+        im1 = ax.imshow(reconstructor, cmap='inferno')
+        fig.colorbar(im1)
+        ax.axis('off')
+        plt.show()
+
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 10), facecolor='k')
+        im1 = ax.scatter(env.xvalid, env.yvalid, c=integrator, s=2500, cmap='viridis')
+        # fig.colorbar(im1)
+        ax.axis('off')
+        plt.show()
+
 
 def influence_functions(env):
     res = env.dm.resolution
