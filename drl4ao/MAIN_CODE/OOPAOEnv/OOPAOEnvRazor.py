@@ -291,6 +291,7 @@ class OOPAO(gym.Env):
         self.tel.resetOPD()
         # initialize DM commands
         self.dm.coefs=0
+        self.dm_prev = self.dm.coefs.copy()
         self.source*self.tel*self.dm*self.wfs
         self.tel+self.atm
 
@@ -487,8 +488,8 @@ class OOPAO(gym.Env):
 
         # Integrator
         # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
-        self.dm.coefs += action 
-        self.dm_pref = self.dm.coefs.copy()
+        self.dm.coefs = (self.dm_prev * 0.99) + action 
+        self.dm_prev = self.dm.coefs.copy()
 
         # store the slopes after computing the commands => 2 frames delay
         self.wfsSignal=self.wfs.signal

@@ -69,7 +69,7 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
         else:            
             action = policy(simulated_obs.squeeze(0), torch.cat([past_obs, past_act],dim = 1)) 
             #Added the gain to the policy as well 
-            action = env.gainCL * action.squeeze(0)                                               
+            action = action.squeeze(0)                                               
         
         next_obs, reward, strehl, done, _ = env.step(t,action.squeeze())
         
