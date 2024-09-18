@@ -80,7 +80,7 @@ class ConvPolicy(nn.Module):
                 nn.init.normal_(module.weight, mean = 0, std = standart_dev)
                 nn.init.constant_(module.bias, mean_bias)
 
-    def forward(self, state, history = None, sigma=0.):
+    def forward(self, state, history = None):
         if state.ndim == 3:
             state = state.view(1, *state.shape)
         if state.ndim == 2:
@@ -94,7 +94,7 @@ class ConvPolicy(nn.Module):
 
         #torch.cuda.synchronize()
         #t = time.time()
-        out = (out + sigma * torch.randn_like(out)).clamp(-1, 1)
+        out = out.clamp(-1, 1)
 
         ret = torch.zeros_like(out)
 

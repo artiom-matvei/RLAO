@@ -63,14 +63,15 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
 
 
         if  episode < warmup_ts:
-            action = 0.5 * obs.unsqueeze(0)
+            action = env.gainCL * obs.unsqueeze(0)
             # action = action + torch.randn_like(action) * sigma
             action = action + env.sample_noise(sigma)
         else:            
-            action = policy(simulated_obs.squeeze(0), torch.cat([past_obs, past_act],dim = 1), sigma = sigma)  
-            action = action.squeeze(0)                                               
+            action = policy(simulated_obs.squeeze(0), torch.cat([past_obs, past_act],dim = 1)) 
+            #Added the gain to the policy as well 
+            action = env.gainCL * action.squeeze(0)                                               
         
-        next_obs, reward,strehl, done, _ = env.step(t,action.squeeze())
+        next_obs, reward, strehl, done, _ = env.step(t,action.squeeze())
         
         #env.render()
         # LE_PSF,SE_PSF = env.render4plot(t)

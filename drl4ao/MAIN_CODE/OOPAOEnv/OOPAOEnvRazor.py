@@ -488,6 +488,7 @@ class OOPAO(gym.Env):
         # Integrator
         # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
         self.dm.coefs += action 
+        self.dm_pref = self.dm.coefs.copy()
 
         # store the slopes after computing the commands => 2 frames delay
         self.wfsSignal=self.wfs.signal

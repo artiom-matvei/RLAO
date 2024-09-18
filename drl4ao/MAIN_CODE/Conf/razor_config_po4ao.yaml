@@ -14,6 +14,7 @@ altitude: [0]
 nLoop: 10000
 gainCL: 0.225
 gain_list: [0.15,0.2,0.25,0.3,0.35]
+leak: 0.99
 frames_per_sec: 500
 delay: 0
 

@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=1 # maximum cpu per task is 3.5 per gpus
 #SBATCH --gres=gpu:1
 #SBATCH --mem=40G                        # memory per node
-#SBATCH --time=00-00:59         # time (DD-HH:MM)
+#SBATCH --time=00-01:59         # time (DD-HH:MM)
 #SBATCH -e ../../logs/long_run/err_po4ao_reproduce.txt
 #SBATCH --account=def-lplevass
 #SBATCH --job-name=delay_ws_gridsearch
