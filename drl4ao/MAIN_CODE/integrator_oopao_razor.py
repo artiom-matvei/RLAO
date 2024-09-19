@@ -15,38 +15,36 @@ from ML_stuff.dataset_tools import read_yaml_file #TorchWrapper,
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
-args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
+#For razor sim
+# from PO4AO.mbrl_funcsRAZOR import get_env
+# args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
+
+#For papyrus sim
+from PO4AO.mbrl import get_env
+args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
 #%%
 
 
-args.nLoop = 500
+args.nLoop = 10000
+args.delay = 1
 
-for delay in [0, 3, 6]:
-
-    args.delay = delay
+for r0 in [0.13, 0.0866666667]:
+    args.r0 = r0
     env = get_env(args)
+    env.gainCL = 0.3
 
-    env.wfs.threshold_cog = 0.0745
-    env.gainCL = 0.225
-    # env.change_mag(4.5)
-    # env.atm.r0 = 0.1
-
-    # for gainCL in args.gain_list:
-
-
-
-    for ws in [[2], [6]]:
+    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws
         env.atm.generateNewPhaseScreen(17)
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'delay_{delay}_ws_{ws[0]}'
+        savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'r0_{r0}_ws_{ws}_gain_{env.gainCL}'
         
         print('Start make env')
         os.makedirs(savedir, exist_ok=True)
@@ -64,6 +62,7 @@ for delay in [0, 3, 6]:
         LE_PSFs= []
         SE_PSFs = []
         SRs = []
+        SR_std = []
         rewards = []
         accu_reward = 0
 
@@ -85,17 +84,19 @@ for delay in [0, 3, 6]:
             print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
             print("SR: " +str(strehl))
             if (i+1) % 500 == 0:
-                sr = env.calculate_strehl_AVG()
+                sr, std = env.calculate_strehl_AVG()
                 SRs.append(sr)
+                SR_std.append(std)
                 rewards.append(accu_reward)
                 accu_reward = 0
 
 
-        print(f'Delay: {delay}, wind speed: {ws}, Mean SR: {SRs[0]}')
+        print(f'R0: {r0}, wind speed: {ws}, Mean SR: {SRs[0]}')
         print(rewards)
         print("Saving Data")
         torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
         torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+        torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
 
 
 
@@ -193,45 +194,30 @@ for delay in [0, 3, 6]:
 # %%
 plt.style.use('ggplot')
 
-rl_low = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results_long_warmup/po4ao/20240916-182741_thresholds_100s_0.01/sr2plot.pt')
-rl_high = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results_long_warmup/po4ao/20240916-172827_thresholds_100s_0.215789/sr2plot.pt')
+rl = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/papyrus_results/po4ao/20240918-165633_test_20sr0_0.0866666667_ws_[20, 24, 22, 30, 40]/sr2plot.pt')
 
-int_low = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results_long_warmup/integrator/20240916-170537_thresholds_20s_0.01/sr2plot.pt')
-int_high = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/reproduce_results_long_warmup/integrator/20240916-171648_thresholds_20s_0.215789/sr2plot.pt')
 
+
+int_09 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/papyrus_results/integrator/20240918-180118_test_20s_r0_0.0866666667_ws_[20, 24, 22, 30, 40]_gain_0.9/sr2plot.pt')
+# std_09 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/papyrus_results/integrator/20240918-115125_test_1s_r0_0.13_ws_[10, 12, 11, 15, 20]_gain_0.9/srstd2plot.pt')
+int_03 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/papyrus_results/integrator/20240918-185105_test_20s_r0_0.0866666667_ws_[20, 24, 22, 30, 40]_gain_0.3/sr2plot.pt')
+# std_03 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/papyrus_results/integrator/20240918-120114_test_1s_r0_0.13_ws_[10, 12, 11, 15, 20]_gain_0.3/srstd2plot.pt')
 # int_high = np.array([0.6272068069578972, 0.6101089753904848, 0.6466121299543616, 0.6156680442499712, 0.5975168685029444, 0.5645924791915994, 0.6135951834647645, 0.5938773426621287, 0.6281442138420543, 0.6060260610290502, 0.6427900938099987, 0.6067561657014292, 0.5962182234646175, 0.5848466731584152, 0.6166977710391496, 0.612063170573298, 0.603946121391644, 0.5721899937647568, 0.5785997720906566, 0.6240568186429183])
 # int_low = np.array([0.3085460076971307, 0.29346112888697656, 0.277581243388001, 0.3003261896768564, 0.30046795740171467, 0.2882446577708787, 0.2604695290316118, 0.2750211906366203, 0.29278651507272035, 0.24276377135574356, 0.3006226846595084, 0.24657455688594143, 0.2824618668313091, 0.2689726298871343, 0.2700150266799032, 0.2266344915888839, 0.30294277338781284, 0.2899828868486627, 0.35164186520181884, 0.27791627269167446])
-plt.plot(rl_low, label='PO4AO - low threshold')
-plt.plot(rl_high, label='PO4AO - high threshold')
 
-x = np.arange(len(rl_low))
+x = np.arange(1, len(rl)+1)
 
+plt.plot(x, rl, label='PO4AO')
 
-mean_high = np.mean(int_high)
-mean_low = np.mean(int_low)
+plt.plot(x,int_09, color='#348ABD',label="Integrator - 0.9 gain")
+plt.plot(x, int_03, color='#FBC15E' , label="Integrator - 0.3 gain")
 
-sigma_high = np.std(int_high)
-sigma_low = np.std(int_low)
-
-y_1sigma_upper_high = np.full(len(x), mean_high + sigma_high)
-y_1sigma_lower_high = np.full(len(x), mean_high - sigma_high)
-y_2sigma_upper_high = np.full(len(x), mean_high + 2*sigma_high)
-y_2sigma_lower_high = np.full(len(x), mean_high - 2*sigma_high)
-
-y_1sigma_upper_low = np.full(len(x), mean_low + sigma_low)
-y_1sigma_lower_low = np.full(len(x), mean_low - sigma_low)
-y_2sigma_upper_low = np.full(len(x), mean_low + 2*sigma_low)
-y_2sigma_lower_low = np.full(len(x), mean_low - 2*sigma_low)
-
-plt.fill_between(x, y_2sigma_lower_high, y_2sigma_upper_high, alpha=0.3)
-plt.fill_between(x, y_1sigma_lower_high, y_1sigma_upper_high, alpha=0.5)
+plt.ylim(0,0.8)
+plt.axvline(2, ls='--', color='k', alpha=0.5)
+plt.text(2.5, 0.7, 'Warmup', alpha=0.5)
 
 
-plt.fill_between(x, y_2sigma_lower_low, y_2sigma_upper_low, alpha=0.3)
-plt.fill_between(x, y_1sigma_lower_low, y_1sigma_upper_low, alpha=0.5)
-
-
-plt.title('Mean Strehl of PO4AO')
+plt.title(f'Mean Strehl of PO4AO -- r0: {0.086}, WS: {20}')
 plt.legend()
 plt.show()
 # %%

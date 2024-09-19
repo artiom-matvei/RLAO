@@ -12,19 +12,26 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../A
 from OOPAO.tools.displayTools import displayMap
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+from types import SimpleNamespace
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
 from ML_stuff.models import Reconstructor, Reconstructor_2
+#For Razor sim
+# from PO4AO.mbrl_funcsRAZOR import get_env
+# try:
+#     args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+# except:
+#     args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+#For papyrus sim
+from PO4AO.mbrl import get_env
+try:
+    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
+except:
+    args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
+
 from gifTools import create_gif
-from types import SimpleNamespace
+
 import matplotlib.pyplot as plt
 plt.rcParams['image.cmap'] = 'inferno'
-# SimpleNamespace takes a dict and allows the use of
-# keys as attributes. ex: args['r0'] -> args.r0
-try:
-    args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
-except:
-    args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -103,7 +110,7 @@ def slope_map(env, with_atm=True, seed=0):
         # env.tel + env.atm
 
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    im1 = ax.imshow(env.wfs.signal_2D.copy().T, cmap='inferno')
+    im1 = ax.imshow(env.wfs.signal_2D.copy(), cmap='inferno')
     fig.colorbar(im1)
     ax.axis('off')
     plt.show()
@@ -151,7 +158,7 @@ def linear_reconstructor(env, opd=False, seed=0):
 
     else:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10), facecolor='k')
-        im1 = ax.scatter(env.xvalid, env.yvalid, c=integrator, s=2500, cmap='viridis')
+        im1 = ax.scatter(env.xvalid, env.yvalid, c=integrator, s=800, cmap='viridis')
         # fig.colorbar(im1)
         ax.axis('off')
         plt.show()
@@ -235,7 +242,6 @@ def animate_im(env, frame_rate=10):
     env.wfs.cam.photonNoise = False
     env.wfs.cam.darkCurrent = 0
     env.wfs.cam.FWC = None
-    env.change_mag(4)
 
     env.tel - env.atm
     env.tel.resetOPD()

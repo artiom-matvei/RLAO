@@ -22,9 +22,9 @@ class Reconstructor(nn.Module):
             # nn.LeakyReLU(),
             # nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # No downsampling
             # nn.LeakyReLU(),
-            nn.Conv2d(128, 128,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.Conv2d(128, 128,           kernel_size=3, stride=1, padding=1),  # Downsample by 2x
             nn.LeakyReLU(),
-            nn.Conv2d(128, 256,           kernel_size=3, stride=2, padding=1),  # Downsample by 2x
+            nn.Conv2d(128, 256,           kernel_size=3, stride=1, padding=1),  # Downsample by 2x
             nn.LeakyReLU(),
             # nn.Conv2d(256, 256,           kernel_size=3, stride=2, padding=1),  # No downsampling
             # nn.LeakyReLU(),

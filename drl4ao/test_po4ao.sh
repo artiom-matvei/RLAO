@@ -6,13 +6,13 @@
 #SBATCH --time=00-01:59         # time (DD-HH:MM)
 #SBATCH -e ../../logs/long_run/err_po4ao_reproduce.txt
 #SBATCH --account=def-lplevass
-#SBATCH --job-name=delay_ws_gridsearch
+#SBATCH --job-name=long_delay_ws_gridsearch
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=parker.levesque@gmail.com
 
 cd MAIN_CODE
 
-savedir='grid_search'
+savedir='papyrus_results'
 logpath="../../logs/"$savedir
 mkdir -p $logpath 
 

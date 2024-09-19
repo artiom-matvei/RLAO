@@ -9,7 +9,7 @@ from .__load__oopao import load_oopao
 import matplotlib.pyplot as plt
 import numpy as np
 import gym
-
+import torch
 
 class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
@@ -65,6 +65,8 @@ class OOPAO(gym.Env):
         self.xvalid = None
         self.yvalid = None
 
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
     def reset(self):
         self.set_params()
@@ -95,8 +97,10 @@ class OOPAO(gym.Env):
         config = importlib.import_module(self.param_file)
 
         param = config.initializeParameterFile(args)
-        
 
+        self.param = param
+        
+        import time
         from OOPAO.Atmosphere import Atmosphere
         from OOPAO.DeformableMirror import DeformableMirror
         from OOPAO.MisRegistration import MisRegistration
@@ -160,11 +164,11 @@ class OOPAO(gym.Env):
         self.atm.update()
 
         # display the atmosphere layers for the sources specified in list_src: 
-        self.atm.display_atm_layers(list_src=[self.ngs,self.src])
+        # self.atm.display_atm_layers(list_src=[self.ngs,self.src])
 
         # the sources coordinates can be updated on the fly: 
         self.src.coordinates = [0,0]
-        self.atm.display_atm_layers(list_src=[self.ngs,self.src])
+        # self.atm.display_atm_layers(list_src=[self.ngs,self.src])
 
         
         #%% -----------------------     Scientific Detector   ----------------------------------
@@ -333,42 +337,44 @@ class OOPAO(gym.Env):
         self.LE_PSF = np.log10(self.tel.PSF)
         self.LE_PSFs = []
         
-        from OOPAO.tools.displayTools import cl_plot
+        # from OOPAO.tools.displayTools import cl_plot
 
-        self.plot_obj = cl_plot(list_fig  = [self.atm.OPD,
-                                        self.tel.mean_removed_OPD,
-                                        self.tel.mean_removed_OPD,
-                                        [[0,0],[0,0],[0,0]],
-                                        self.wfs.cam.frame,
-                                        self.wfs.focal_plane_camera.frame,
-                                        np.log10(self.tel.PSF),
-                                        np.log10(self.tel.PSF)],
-                            type_fig          = ['imshow',
-                                                 'imshow',
-                                                 'imshow',
-                                                 'plot',
-                                                 'imshow',
-                                                 'imshow',
-                                                 'imshow',
-                                                 'imshow'],
-                            list_title        = ['Turbulence [nm]',
-                                                 'NGS@'+str(self.ngs.coordinates[0])+'" WFE [nm]',
-                                                 'SRC@'+str(self.src.coordinates[0])+'" WFE [nm]',
-                                                 None,
-                                                 'WFS Detector',
-                                                 'WFS Focal Plane Camera',
-                                                 None,
-                                                 None],
-                            list_legend       = [None,None,None,['SRC@'+str(self.src.coordinates[0])+'"','NGS@'+str(self.ngs.coordinates[0])+'"'],None,None,None,None],
-                            list_label        = [None,None,None,['Time','WFE [nm]'],None,None,['NGS PSF@'+str(self.ngs.coordinates[0])+'" -- FOV: '+str(np.round(ngs_cam.fov_arcsec,2)) +'"',''],['SRC PSF@'+str(self.src.coordinates[0])+'" -- FOV: '+str(np.round(src_cam.fov_arcsec,2)) +'"','']],
-                            n_subplot         = [4,2],
-                            list_display_axis = [None,None,None,True,None,None,None,None],
-                            list_ratio        = [[0.95,0.95,0.1],[1,1,1,1]], s=20)
+        # self.plot_obj = cl_plot(list_fig  = [self.atm.OPD,
+        #                                 self.tel.mean_removed_OPD,
+        #                                 self.tel.mean_removed_OPD,
+        #                                 [[0,0],[0,0],[0,0]],
+        #                                 self.wfs.cam.frame,
+        #                                 self.wfs.focal_plane_camera.frame,
+        #                                 np.log10(self.tel.PSF),
+        #                                 np.log10(self.tel.PSF)],
+        #                     type_fig          = ['imshow',
+        #                                          'imshow',
+        #                                          'imshow',
+        #                                          'plot',
+        #                                          'imshow',
+        #                                          'imshow',
+        #                                          'imshow',
+        #                                          'imshow'],
+        #                     list_title        = ['Turbulence [nm]',
+        #                                          'NGS@'+str(self.ngs.coordinates[0])+'" WFE [nm]',
+        #                                          'SRC@'+str(self.src.coordinates[0])+'" WFE [nm]',
+        #                                          None,
+        #                                          'WFS Detector',
+        #                                          'WFS Focal Plane Camera',
+        #                                          None,
+        #                                          None],
+        #                     list_legend       = [None,None,None,['SRC@'+str(self.src.coordinates[0])+'"','NGS@'+str(self.ngs.coordinates[0])+'"'],None,None,None,None],
+        #                     list_label        = [None,None,None,['Time','WFE [nm]'],None,None,['NGS PSF@'+str(self.ngs.coordinates[0])+'" -- FOV: '+str(np.round(ngs_cam.fov_arcsec,2)) +'"',''],['SRC PSF@'+str(self.src.coordinates[0])+'" -- FOV: '+str(np.round(src_cam.fov_arcsec,2)) +'"','']],
+        #                     n_subplot         = [4,2],
+        #                     list_display_axis = [None,None,None,True,None,None,None,None],
+        #                     list_ratio        = [[0.95,0.95,0.1],[1,1,1,1]], s=20)
 
         self.wfs.cam.photonNoise     = True
         self.display                 = True
         self.reconstructor = M2C_CL@calib_CL.M
         self.F = M2C_CL @ np.linalg.pinv(M2C_CL)
+
+        self.M2C_CL = M2C_CL
 
 
     def set_wfs(self,param,type = "pyramid"):
@@ -524,9 +530,10 @@ class OOPAO(gym.Env):
         Cleans the strehl array after each episode.
         """
         avg = np.mean(self.SR)
+        std = np.std(self.SR)
         self.SR = []
 
-        return avg
+        return avg, std
     
     def integrator(self):
         return -self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
@@ -551,15 +558,24 @@ class OOPAO(gym.Env):
         noise = self.F @ (sigma * np.random.normal(0,1 , size = (int(self.dm.nValidAct),))) # 357
         return self.vec_to_img(noise)
     
-    def vec_to_img(self, action_vec):
-        valid_actus = np.zeros((self.nActuator , self.nActuator))
+    def vec_to_img(self, action_vec, use_torch=False):
+        if use_torch:
+            valid_actus = torch.zeros((self.nActuator, self.nActuator)).to(self.device)
+
+        else:
+            valid_actus = np.zeros((self.nActuator, self.nActuator))
+
         valid_actus[self.xvalid, self.yvalid] = action_vec
 
         return valid_actus
 
     def img_to_vec(self, action):
-        assert len(action.shape) == 2
+        # assert len(action.shape) == 2
+        if len(action.shape) == 4:
+            action_out = action[:,:,self.xvalid, self.yvalid]
+        else:
+            action_out = action[self.xvalid, self.yvalid]
         
-        return action[self.xvalid, self.yvalid]
+        return action_out
 
         

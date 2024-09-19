@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'updated_code'
+savedir: 'papyrus_results'
 experiment_tag: test
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'

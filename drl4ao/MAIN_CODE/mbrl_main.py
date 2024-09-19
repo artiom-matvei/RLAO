@@ -16,7 +16,13 @@ from PO4AO.conv_models_simple import EnsembleDynamics, ConvPolicy
 from PO4AO.util_simple import get_n_params, EfficientExperienceReplay
 from ML_stuff.dataset_tools import read_yaml_file
 from torch.utils.tensorboard.writer import SummaryWriter
-from PO4AO.mbrl_funcsRAZOR import get_env,run,train_dynamics,train_policy
+
+# For RAZOR sim
+# from PO4AO.mbrl_funcsRAZOR import get_env,run,train_dynamics,train_policy
+
+#For Papyrus sim
+from PO4AO.mbrl import get_env,run,train_dynamics,train_policy
+
 from Plots.plots import save_plots
 import time
 
@@ -27,31 +33,32 @@ import argparse
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 
-# %%
-args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 
+#%%
+# args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
+args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
 
 # %%
 
 # if __name__=='__main__':
-for delay in [0, 3]:
 
-    args.delay = delay
+args.delay = 1
+
+#%%
+
+for r0 in [0.13, 0.0866666667]:
+    args.r0 = r0
     env = get_env(args)
+    env.gainCL = 0.3
 
-    env.wfs.threshold_cog = 0.0745
-    env.gainCL = 0.225
-
-
-    for ws in [[2], [6]]:
+    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws
         env.atm.generateNewPhaseScreen(17)
 
-
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'delay_{delay}_ws_{ws[0]}')
-        savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'delay_{delay}_ws_{ws[0]}'
+        writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}')
+        savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
 
 
         os.makedirs(savedir, exist_ok=True)
@@ -66,12 +73,12 @@ for delay in [0, 3]:
         # env.change_mag(4)
 
 
-    
+
         flt = env.F
         flt = torch.from_numpy(np.asarray(flt)).float()
 
         replay = EfficientExperienceReplay((args.data_shape,args.data_shape), (args.data_shape,args.data_shape))
-        
+
         dynamics = EnsembleDynamics(env.xvalid, env.yvalid, args.n_history) 
         policy = ConvPolicy(env.xvalid, env.yvalid, args.initial_sigma, flt, args.n_history)
 
@@ -80,9 +87,9 @@ for delay in [0, 3]:
         # device = torch.device(args.gpu_device)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         args.gpu_device = device
-        
+
         #print('params', get_n_params(dynamics), get_n_params(policy))
 
         sigma = args.initial_sigma
@@ -90,6 +97,7 @@ for delay in [0, 3]:
 
         reward_sums = torch.zeros(args.iters)
         evals = torch.zeros(args.iters)
+        std = torch.zeros(args.iters)
         past_obs = None
         past_act = None
 
@@ -101,11 +109,12 @@ for delay in [0, 3]:
             start = time.time()
             
             strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration)
-        
+
             if reward_sum < -46:
                 converged = 1
             reward_sums[i] = reward_sum
-            evals[i] =  strehl
+            evals[i] =  strehl[0]
+            std[i] = strehl[1]
 
             dyn_loss = 0
             pol_loss = 0
@@ -131,9 +140,9 @@ for delay in [0, 3]:
 
             writer.add_scalar('train/pol_loss', pol_loss, i)          
             writer.add_scalar('train/dyn_loss', dyn_loss, i)      
-            writer.add_scalar('train/strehl', strehl, i)
+            writer.add_scalar('train/strehl', strehl[0], i)
             writer.add_scalar('train/reward_sum', reward_sum, i)
-            print(f'Iteration (Episode) {i} complete ({time.time() - start:.2f}s). \n\t dyn:{dyn_loss:.4f} pol:{pol_loss:.4f} \n\t strehl:{strehl:.3f} reward:{reward_sum:.3f}')
+            print(f'Iteration (Episode) {i} complete ({time.time() - start:.2f}s). \n\t dyn:{dyn_loss:.4f} pol:{pol_loss:.4f} \n\t strehl:{strehl[0]:.3f} reward:{reward_sum:.3f}')
             
             sigma -= (args.initial_sigma / args.warmup_ts)
             sigma = max(0, sigma)

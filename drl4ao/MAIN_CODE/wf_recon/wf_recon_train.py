@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
 from ML_stuff.models import Reconstructor, Reconstructor_2
 from Plots.plots import save_plots
@@ -19,10 +19,19 @@ import matplotlib.pyplot as plt
 plt.rcParams['image.cmap'] = 'inferno'
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
+#For Razor sim
+# from PO4AO.mbrl_funcsRAZOR import get_env
+# try:
+#     args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+# except:
+#     args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+
+# For papyrus sim
+from PO4AO.mbrl import get_env
 try:
-    args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
 except:
-    args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+    args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -32,7 +41,7 @@ savedir = os.path.dirname(__file__)
 env = get_env(args)
 
 
-with open("training_20k.txt", "a") as f:
+with open("papyrus_training_20k.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -66,7 +75,7 @@ with open("training_20k.txt", "a") as f:
 # ds_size = len(X)
 #------------- Uncomment to load a dataset from individual files -------------#
 
-data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets'
+data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets/test'
 
 # X = os.listdir(data_dir_path + '/inputs')
 # y = os.listdir(data_dir_path + '/targets')
@@ -76,7 +85,7 @@ ds_size = 20000
 
 # %%
 # Set the random seed for reproducibility
-np.random.seed(432578)
+np.random.seed(432574358)
 
 # Shuffle the data indices
 indices = np.arange(ds_size)
@@ -113,8 +122,8 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_big_boy.npy'
-target_file_path = data_dir_path+'/dm_cmds_big_boy.npy'
+input_file_path = data_dir_path+'/wfs_frames_papyrus.npy'
+target_file_path = data_dir_path+'/dm_cmds_papyrus.npy'
 
 dm_shape = env.dm.coefs.shape
 wfs_shape=env.wfs.cam.frame.shape
@@ -123,22 +132,22 @@ D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape
 D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
 D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
 
-with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
 
-reconstructor = Reconstructor_2(1,1,11, env.xvalid, env.yvalid)
+reconstructor = Reconstructor(1,1,21, env.xvalid, env.yvalid)
 
 # EMA of model parameters
-ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
-    multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
+# ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
+#     multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
 
 optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
 criterion = nn.MSELoss()
 
 reconstructor.to(device)
-ema_reconstructor.to(device)
+# ema_reconstructor.to(device)
 
 
 train_loader = DataLoader(D_train, batch_size=32, shuffle=True)
@@ -151,14 +160,14 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/best_models_20k.pt'  # Path to save the best model
+save_path = savedir+'/models/papyrus_best_models_20k.pt'  # Path to save the best model
 
-with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
 
-n_epochs = 300
+n_epochs = 150
 for epoch in range(n_epochs):
 
     start = time.time()
@@ -181,7 +190,7 @@ for epoch in range(n_epochs):
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
-        ema_reconstructor.update_parameters(reconstructor)
+        # ema_reconstructor.update_parameters(reconstructor)
 
         running_loss += loss.item()
 
@@ -192,7 +201,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -208,22 +217,22 @@ for epoch in range(n_epochs):
 
             #forward pass
             outputs = env.img_to_vec(reconstructor(inputs))
-            ema_outputs = env.img_to_vec(ema_reconstructor(inputs))
+            # ema_outputs = env.img_to_vec(ema_reconstructor(inputs))
 
 
             loss = criterion(outputs, targets)
             val_loss += loss.item()
 
-            ema_loss = criterion(ema_outputs, targets)
-            ema_val_loss += ema_loss.item()
+            # ema_loss = criterion(ema_outputs, targets)
+            # ema_val_loss += ema_loss.item()
 
     avg_val_loss = val_loss/len(val_loader)
     val_losses.append(avg_val_loss)
 
-    avg_ema_val_loss = ema_val_loss/len(val_loader)
-    ema_val_losses.append(avg_ema_val_loss)
+    # avg_ema_val_loss = ema_val_loss/len(val_loader)
+    # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -235,19 +244,19 @@ for epoch in range(n_epochs):
         torch.save({
             'epoch': epoch + 1,
             'model_state_dict': reconstructor.state_dict(),
-            'ema_model_state_dict': ema_reconstructor.module.state_dict(),
+            # 'ema_model_state_dict': ema_reconstructor.module.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_ema_big_dataset', train_losses)
-    np.save(savedir+'/losses/val_loss_ema_big_dataset', val_losses)
-    np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
+    np.save(savedir+'/losses/train_loss_papyrus', train_losses)
+    np.save(savedir+'/losses/val_loss_papyrus', val_losses)
+    # np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
 reconstructor.eval()  # Set the model to evaluation mode
@@ -270,9 +279,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_ema_big_dataset', train_losses)
-np.save(savedir+'/losses/val_loss_ema_big_dataset', val_losses)
-np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_ema_big_dataset.pt')
+np.save(savedir+'/losses/train_loss_papyrus', train_losses)
+np.save(savedir+'/losses/val_loss_papyrus', val_losses)
+# np.save(savedir+'/losses/ema_val_loss_papyrus', ema_val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus.pt')
 
 # %%
