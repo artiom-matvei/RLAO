@@ -56,13 +56,17 @@ class FileDataset(Dataset):
         target_image = self.target_data[idx]
         
         # Convert to float and apply any transformations (like normalization)
-        input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
+        # input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
         target_image = torch.tensor(np.arcsinh(target_image / self.scale), dtype=torch.float32).unsqueeze(0)
 
+        # input_image = (input_image - input_image.mean()) / input_image.std()
+
+        #For pyramid
+        input_image = torch.tensor(input_image, dtype=torch.float32)
         input_image = (input_image - input_image.mean()) / input_image.std()
+        reshaped_input = input_image.view(2, 24, 2, 24).permute(0, 2, 1, 3).contiguous().view(4, 24, 24)
 
-
-        return input_image, target_image
+        return reshaped_input, target_image
 
 
 def read_yaml_file(file_path):

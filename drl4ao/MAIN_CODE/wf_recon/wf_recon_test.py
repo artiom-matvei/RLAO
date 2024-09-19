@@ -9,7 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import time
 import numpy as np
-from PO4AO.mbrl_funcsRAZOR import get_env
+# from PO4AO.mbrl_funcsRAZOR import get_env
+from PO4AO.mbrl import get_env
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
 from ML_stuff.models import Reconstructor, Reconstructor_2
 from types import SimpleNamespace
@@ -28,10 +29,14 @@ plt.rcParams['legend.facecolor'] = 'white'
 
 # SimpleNamespace takes a dict and allows the use of
 # keys as attributes. ex: args['r0'] -> args.r0
+# try:
+#     args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+# except:
+#     args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
 try:
-    args = SimpleNamespace(**read_yaml_file('./Conf/razor_config_po4ao.yaml'))
+    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
 except:
-    args = SimpleNamespace(**read_yaml_file('../Conf/razor_config_po4ao.yaml'))
+    args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
 
 savedir = os.path.dirname(__file__)
 #%%
@@ -73,11 +78,11 @@ wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/best_model_20k.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/papyrus_best_models_20k.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
-reconstructor = Reconstructor(1,1,11, env.xvalid,env.yvalid)
+reconstructor = Reconstructor(4,1,21, env.xvalid,env.yvalid)
 # Restore the regular model and optimizer state
 reconstructor.load_state_dict(checkpoint['model_state_dict'])
 
@@ -88,8 +93,19 @@ reconstructor.eval()
 # Make predictions
 obs = torch.tensor(wfsf).float().unsqueeze(1)
 
+
+
+
+mean = obs.mean(dim=[2, 3], keepdim=True)  # Mean over height and width dimensions
+std = obs.std(dim=[2, 3], keepdim=True)    # Std over height and width dimensions
+
+# Perform mean subtraction and scaling by standard deviation
+normalized_tensor = (obs - mean) / std
+
+reshaped_input = normalized_tensor.view(-1, 2, 24, 2, 24).permute(0, 1, 3, 2, 4).contiguous().view(-1, 4, 24, 24)
+
 with torch.no_grad():
-    pred = reconstructor(obs)
+    pred = reconstructor(reshaped_input)
     # pred_OPD = OPD_model(network(obs), modes, res)
 
 
@@ -133,15 +149,15 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'ema_big_dataset'
+tag = 'papyrus'
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
 val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
-ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
+# ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
 
 plt.plot(train_loss, label='Train Loss', color='k')
 plt.plot(val_loss, label='Val Loss', color='r')
-plt.plot(ema_loss, label='ema loss', ls='--', c='k')
+# plt.plot(ema_loss, label='ema loss', ls='--', c='k')
 
 plt.axvline(np.argmin(val_loss), color='k', ls='--', alpha=0.4, label='Best Model')
 
