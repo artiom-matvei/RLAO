@@ -12,7 +12,7 @@ import time
 import numpy as np
 
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
-from ML_stuff.models import Reconstructor, Reconstructor_2
+from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
@@ -41,7 +41,7 @@ savedir = os.path.dirname(__file__)
 env = get_env(args)
 
 
-with open("papyrus_training_20k.txt", "a") as f:
+with open("papyrus_training_unet.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -132,12 +132,12 @@ D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape
 D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
 D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
 
-with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
 
-reconstructor = Reconstructor(1,1,21, env.xvalid, env.yvalid)
+reconstructor = build_unet(env.xvalid, env.yvalid)
 
 # EMA of model parameters
 # ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
@@ -160,9 +160,9 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/papyrus_best_models_20k.pt'  # Path to save the best model
+save_path = savedir+'/models/papyrus_best_model_unet.pt'  # Path to save the best model
 
-with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
@@ -201,7 +201,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -232,7 +232,7 @@ for epoch in range(n_epochs):
     # avg_ema_val_loss = ema_val_loss/len(val_loader)
     # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -249,13 +249,13 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("papyrus_training_20k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_papyrus', train_losses)
-    np.save(savedir+'/losses/val_loss_papyrus', val_losses)
+    np.save(savedir+'/losses/train_loss_papyrus_unet', train_losses)
+    np.save(savedir+'/losses/val_loss_papyrus_unet', val_losses)
     # np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
@@ -279,9 +279,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_papyrus', train_losses)
-np.save(savedir+'/losses/val_loss_papyrus', val_losses)
-# np.save(savedir+'/losses/ema_val_loss_papyrus', ema_val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus.pt')
+np.save(savedir+'/losses/train_loss_papyrus_unet', train_losses)
+np.save(savedir+'/losses/val_loss_papyrus_unet', val_losses)
+# np.save(savedir+'/losses/ema_val_loss_papyrus_unet', ema_val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet.pt')
 
 # %%
