@@ -63,7 +63,7 @@ class FileDataset(Dataset):
 
         #For pyramid
         input_image = torch.tensor(input_image, dtype=torch.float32)
-        input_image = (input_image - input_image.mean()) / input_image.std()
+        # input_image = (input_image - input_image.mean()) / input_image.std()
         reshaped_input = input_image.view(2, 24, 2, 24).permute(0, 2, 1, 3).contiguous().view(4, 24, 24)
 
         return reshaped_input, target_image
@@ -135,40 +135,48 @@ def make_diverse_dataset(env, size, num_scale=6, min_scale=1e-9, max_scale=1e-8,
     return wfs_frames, dm_commands
 
 
-def dataset_to_file(env, size, scaling=1e-6, dir_path = '', tag = ''):
-    """Creates a pandas DataFrame with wavefront sensor measurements
-    and corresponding mirror shapes, generated from normally distributed
-    dm coefficients."""
+def data_from_stats(env, pwr_spec, size, savedir='', tag=''):
 
-    os.makedirs(dir_path + '/' + tag + '/inputs', exist_ok=True)
-    os.makedirs(dir_path + '/' + tag + '/targets', exist_ok=True)
+
+
+    dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
+                                                shape=(size*num_scale, *env.dm.coefs.shape))
+    wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
+                                                shape=(size*num_scale, *env.wfs.cam.frame.shape))
+
 
     frame = 0
 
+    start = time.time()
 
     for j in range(size):
+        
 
         env.tel.resetOPD()
 
-        command = np.random.randn(*env.dm.coefs.shape) * scaling
+        coefficients = np.random.normal(0, np.sqr(pwr_spec))
+
+        command = env.M2C_CL@coefficients
 
         env.dm.coefs = command.copy()
 
         env.tel*env.dm
         env.tel*env.wfs
 
-        np.save(dir_path + '/' + tag + f'/inputs/wfs_' + str(int(frame)).zfill(6), np.float32(env.wfs.cam.frame.copy()))
-        np.save(dir_path + '/' + tag + f'/targets/dmc_' + str(int(frame)).zfill(6), np.float32(command.copy()))
+        wfs_frames[frame] = np.float32(env.wfs.cam.frame.copy())
+        dm_commands[frame] = np.float32(command.copy())
 
         frame += 1
 
-        if j+1 == size:
-            print(f'scale factor:{scaling[i]}')
-            print(f"Generated {frame} samples")
+        if frame % 1000 == 0:
+            print(f"Generated {frame} samples in {time.time()-start} seconds")
+            start = time.time()
 
-    return
+    
+    dm_commands.flush()
+    wfs_frames.flush()
 
-
+    return dm_commands, wfs_frames
 
 
 ###### Junk Yard ######

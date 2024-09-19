@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 # from parser_Configurations import Config, ConfigAction
 # from OOPAOEnv.OOPAOEnvRazor import OOPAO
 from ML_stuff.dataset_tools import read_yaml_file #TorchWrapper, 
+from ML_stuff.models import Unet_big
 
 import time
 import numpy as np
@@ -27,19 +28,20 @@ import matplotlib.pyplot as plt
 #For papyrus sim
 from PO4AO.mbrl import get_env
 args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
-
 #%%
 
 
 args.nLoop = 10000
 args.delay = 1
 
-for r0 in [0.13, 0.0866666667]:
+for r0 in [0.13]:#, 0.0866666667]:
     args.r0 = r0
     env = get_env(args)
-    env.gainCL = 0.3
+    env.gainCL = 0.9
 
-    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
+    reconstructor.eval()
+
+    for ws in [[10,12,11,15,20]]:#, [20,24,22,30,40]]:
         env.atm.windSpeed = ws
         env.atm.generateNewPhaseScreen(17)
 
@@ -73,6 +75,7 @@ for r0 in [0.13, 0.0866666667]:
             # print(env.gainCL)
             action = env.gainCL * obs #env.integrator()
             obs, reward,strehl, done, info = env.step(i,action)  
+
             accu_reward+= reward
 
             b= time.time()

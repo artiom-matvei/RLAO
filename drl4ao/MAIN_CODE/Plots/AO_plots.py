@@ -14,7 +14,7 @@ import time
 import numpy as np
 from types import SimpleNamespace
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
-from ML_stuff.models import Reconstructor, Reconstructor_2
+from ML_stuff.models import Reconstructor, Reconstructor_2, Unet_big
 #For Razor sim
 # from PO4AO.mbrl_funcsRAZOR import get_env
 # try:
@@ -199,7 +199,7 @@ def basis_distribution(env):
     zonal_modes = env.dm.modes.copy()
     zonal_proj = np.matmul(np.linalg.inv(np.matmul(zonal_modes.T, zonal_modes)), zonal_modes.T)
 
-    zonal_proj /= np.linalg.norm(zonal_proj, axis=1)[:, None]
+    # zonal_proj /= np.linalg.norm(zonal_proj, axis=1)[:, None]
 
     env.tel.resetOPD()
 
@@ -209,7 +209,7 @@ def basis_distribution(env):
     zernike_modes = env.tel.OPD.copy().reshape(res*res, -1)
     zernike_proj = np.matmul(np.linalg.inv(np.matmul(zernike_modes.T, zernike_modes)), zernike_modes.T)
 
-    zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
+    # zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
 
     for i in range(size):
         env.atm.generateNewPhaseScreen(2389744 * i)
@@ -228,6 +228,8 @@ def basis_distribution(env):
     ax[1].set_title('Power Spectrum of Atmosphere in Modal Basis')
 
     plt.show()
+
+    return np.mean(np.square(modal_coefs), axis=0)
 
 
 # ANIMATE THE IM

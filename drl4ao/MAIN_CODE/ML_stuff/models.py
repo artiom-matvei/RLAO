@@ -185,3 +185,49 @@ class build_unet(nn.Module):
         x_out[:,:,self.xvalid, self.yvalid] = cropped_outputs[:,:,self.xvalid, self.yvalid]
 
         return x_out
+
+
+class Unet_big(nn.Module):
+    def __init__(self, xvalid, yvalid):
+        super().__init__()
+        """ Valid Pixels """
+        self.xvalid = xvalid
+        self.yvalid = yvalid
+
+        """ Encoder """
+        self.e1 = encoder_block(4, 128) # Image size to 12x12
+        self.e2 = encoder_block(128, 128) # Image size to 6x6
+        self.e3 = encoder_block(128, 256) # Image size to 3x3
+        # self.e4 = encoder_block(256, 512)         
+        """ Bottleneck """
+        self.b = conv_block(256, 512) # Image size stays 3x3     
+        """ Decoder """
+        self.d1 = decoder_block(512, 256) # Image size to 6x6
+        self.d2 = decoder_block(256, 128) # Image size to 12x12
+        self.d3 = decoder_block(128, 128) # Image size to 24x24
+        # self.d4 = decoder_block(128, 64)         
+        # """ Classifier """
+        self.outputs = nn.Conv2d(128, 1, kernel_size=3, padding=1)     
+        
+    def forward(self, inputs):
+        """ Encoder """
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        # s4, p4 = self.e4(p3)         
+        """ Bottleneck """
+        b = self.b(p3)         
+        """ Decoder """
+        # d1 = self.d1(b, s4)
+        d1 = self.d1(b, s3)
+        d2 = self.d2(d1, s2)
+        d3 = self.d3(d2, s1)         
+        # """ Classifier """
+        outputs = self.outputs(d3)
+
+        cropped_outputs = outputs[:,:,1:22,1:22]
+
+        x_out = torch.zeros_like(cropped_outputs)
+        x_out[:,:,self.xvalid, self.yvalid] = cropped_outputs[:,:,self.xvalid, self.yvalid]
+
+        return x_out

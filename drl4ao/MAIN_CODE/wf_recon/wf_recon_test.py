@@ -12,7 +12,7 @@ import numpy as np
 # from PO4AO.mbrl_funcsRAZOR import get_env
 from PO4AO.mbrl import get_env
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
-from ML_stuff.models import Reconstructor, Reconstructor_2
+from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet, Unet_big
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
 # Customize rcParams for specific adjustments
@@ -78,11 +78,11 @@ wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/models/papyrus_best_models_20k.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/papyrus_best_model_unet_big_100k.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
-reconstructor = Reconstructor(4,1,21, env.xvalid,env.yvalid)
+reconstructor = Unet_big(env.xvalid,env.yvalid)
 # Restore the regular model and optimizer state
 reconstructor.load_state_dict(checkpoint['model_state_dict'])
 
@@ -100,9 +100,9 @@ mean = obs.mean(dim=[2, 3], keepdim=True)  # Mean over height and width dimensio
 std = obs.std(dim=[2, 3], keepdim=True)    # Std over height and width dimensions
 
 # Perform mean subtraction and scaling by standard deviation
-normalized_tensor = (obs - mean) / std
+# normalized_tensor = (obs - mean) / std
 
-reshaped_input = normalized_tensor.view(-1, 2, 24, 2, 24).permute(0, 1, 3, 2, 4).contiguous().view(-1, 4, 24, 24)
+reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3, 2, 4).contiguous().view(-1, 4, 24, 24)
 
 with torch.no_grad():
     pred = reconstructor(reshaped_input)
@@ -149,11 +149,13 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'papyrus'
+tag = 'papyrus_unet_big_100k'
+
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
 val_loss = np.load(loss_dir + '/val_loss_' + tag + '.npy')
 # ema_loss = np.load(loss_dir + '/ema_val_loss_' + tag + '.npy')
+
 
 plt.plot(train_loss, label='Train Loss', color='k')
 plt.plot(val_loss, label='Val Loss', color='r')

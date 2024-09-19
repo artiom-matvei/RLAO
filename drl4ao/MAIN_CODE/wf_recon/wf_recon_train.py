@@ -12,7 +12,7 @@ import time
 import numpy as np
 
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
-from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet
+from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet, Unet_big
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
@@ -80,7 +80,7 @@ data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_
 # X = os.listdir(data_dir_path + '/inputs')
 # y = os.listdir(data_dir_path + '/targets')
 
-ds_size = 20000
+ds_size = 100000
 
 
 # %%
@@ -122,22 +122,23 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_papyrus.npy'
-target_file_path = data_dir_path+'/dm_cmds_papyrus.npy'
+input_file_path = data_dir_path+'/wfs_frames_100k_papyrus.npy'
+target_file_path = data_dir_path+'/dm_cmds_100k_papyrus.npy'
 
 dm_shape = env.dm.coefs.shape
 wfs_shape=env.wfs.cam.frame.shape
 
-D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
-D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
-D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape)
+D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=100000)
+D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=100000)
+D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=100000)
 
-with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_unet_100k.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
 
-reconstructor = build_unet(env.xvalid, env.yvalid)
+reconstructor = Unet_big(env.xvalid, env.yvalid)
+reconstructor = reconstructor.to(device)
 
 # EMA of model parameters
 # ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
@@ -150,9 +151,9 @@ reconstructor.to(device)
 # ema_reconstructor.to(device)
 
 
-train_loader = DataLoader(D_train, batch_size=32, shuffle=True)
-val_loader = DataLoader(D_val, batch_size=32, shuffle=True)
-test_loader = DataLoader(D_test, batch_size=32, shuffle=True)
+train_loader = DataLoader(D_train, batch_size=64, shuffle=True)
+val_loader = DataLoader(D_val, batch_size=64, shuffle=True)
+test_loader = DataLoader(D_test, batch_size=64, shuffle=True)
 
 
 train_losses = []
@@ -160,9 +161,9 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/papyrus_best_model_unet.pt'  # Path to save the best model
+save_path = savedir+'/models/papyrus_best_model_unet_big_100k.pt'  # Path to save the best model
 
-with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
+with open("papyrus_training_unet_100k.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
@@ -201,7 +202,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet_100k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -232,7 +233,7 @@ for epoch in range(n_epochs):
     # avg_ema_val_loss = ema_val_loss/len(val_loader)
     # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet_100k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -249,13 +250,13 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("papyrus_training_unet.txt", "a") as f:  # 'a' mode appends to the file
+    with open("papyrus_training_unet_100k.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_papyrus_unet', train_losses)
-    np.save(savedir+'/losses/val_loss_papyrus_unet', val_losses)
+    np.save(savedir+'/losses/train_loss_papyrus_unet_big_100k', train_losses)
+    np.save(savedir+'/losses/val_loss_papyrus_unet_big_100k', val_losses)
     # np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
@@ -279,9 +280,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_papyrus_unet', train_losses)
-np.save(savedir+'/losses/val_loss_papyrus_unet', val_losses)
-# np.save(savedir+'/losses/ema_val_loss_papyrus_unet', ema_val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet.pt')
+np.save(savedir+'/losses/train_loss_papyrus_unet_big_100k', train_losses)
+np.save(savedir+'/losses/val_loss_papyrus_unet_big_100k', val_losses)
+# np.save(savedir+'/losses/ema_val_loss_papyrus_unet_big_100k', ema_val_losses)
+torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet_big_100k.pt')
 
 # %%
