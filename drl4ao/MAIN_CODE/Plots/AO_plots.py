@@ -13,7 +13,7 @@ from OOPAO.tools.displayTools import displayMap
 import time
 import numpy as np
 from types import SimpleNamespace
-from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
+from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file, data_from_stats
 from ML_stuff.models import Reconstructor, Reconstructor_2, Unet_big
 #For Razor sim
 # from PO4AO.mbrl_funcsRAZOR import get_env
@@ -212,7 +212,7 @@ def basis_distribution(env):
     # zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
 
     for i in range(size):
-        env.atm.generateNewPhaseScreen(2389744 * i)
+        env.atm.generateNewPhaseScreen(23879744 * i)
         opd = env.tel.OPD.copy()
 
         zonal_coefs[i] = np.matmul(zonal_proj, opd.reshape(res*res))
