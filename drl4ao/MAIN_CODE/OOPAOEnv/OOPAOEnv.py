@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import gym
 import torch
+import os
 
 class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
@@ -251,7 +252,9 @@ class OOPAO(gym.Env):
         Z.computeZernike(self.tel)
 
         # mode to command matrix to project Zernike Polynomials on DM
-        M2C_zernike = np.linalg.pinv(np.squeeze(self.dm.modes[self.tel.pupilLogical,:]))@Z.modes
+        # M2C_zernike = np.linalg.pinv(np.squeeze(self.dm.modes[self.tel.pupilLogical,:]))@Z.modes
+
+        M2C_zernike = np.load(os.path.dirname(__file__)+'/manual_m2c.npy')[:, :50]
 
         # show the first 10 zernikes
         self.dm.coefs = M2C_zernike[:,:10]

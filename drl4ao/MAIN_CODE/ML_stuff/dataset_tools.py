@@ -140,9 +140,9 @@ def data_from_stats(env, pwr_spec, size, savedir='', tag=''):
 
 
     dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
-                                                shape=(size*num_scale, *env.dm.coefs.shape))
+                                                shape=(size, *env.dm.coefs.shape))
     wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
-                                                shape=(size*num_scale, *env.wfs.cam.frame.shape))
+                                                shape=(size, *env.wfs.cam.frame.shape))
 
 
     frame = 0
@@ -154,7 +154,7 @@ def data_from_stats(env, pwr_spec, size, savedir='', tag=''):
 
         env.tel.resetOPD()
 
-        coefficients = np.random.normal(0, np.sqr(pwr_spec))
+        coefficients = np.random.normal(0, np.sqrt(pwr_spec))
 
         command = env.M2C_CL@coefficients
 
