@@ -5,6 +5,11 @@ logs/
 *.mp4
 *.gif
 
+*.txt
+
+losses/
+datasets/
+
 *.DS_Store
 
 inputs/
