@@ -78,7 +78,7 @@ wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/models/papyrus_best_model_unet_big_100k.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/papyrus_best_model_unet_big_200k.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
@@ -120,13 +120,13 @@ cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
 #%%
 fig, ax = plt.subplots(4,3, figsize=(10,13))
 
-vrange = 3
+vrange = .5
 
 for i in range(3):
-    cax1 = ax[0,i].imshow(wfsf[i])
-    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
-    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i] / 1e-6), vmin=-vrange, vmax=vrange)
-    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i] / 1e-6) - pred[i].squeeze(0).detach().numpy(),\
+    cax1 = ax[0,i].imshow(wfsf[i+27])
+    cax2 = ax[1,i].imshow(pred[i+27].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
+    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i+27] / 1e-6), vmin=-vrange, vmax=vrange)
+    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i+27] / 1e-6) - pred[i+27].squeeze(0).detach().numpy(),\
                                                                  vmin=-vrange, vmax=vrange)
 
 
@@ -149,7 +149,7 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'papyrus_unet_big_100k'
+tag = 'papyrus_unet_big_200k'
 
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
@@ -177,3 +177,41 @@ plt.ylabel('MSE Loss')
 
 plt.show()
 # %%
+### Closed loop test ### 
+
+LE_PSFs= []
+SE_PSFs = []
+SRs = []
+SR_std = []
+rewards = []
+accu_reward = 0
+
+x = env.reset_soft()
+
+wfsf = env.wfs.cam.frame.copy()
+
+obs = torch.tensor(wfsf).float().unsqueeze(1)
+
+for i in range(args.nLoop):
+    reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+
+    with torch.no_grad():
+        action = -1 * np.sinh(reconstructor(reshaped_input).squeeze())
+
+    a=time.time()
+    # print(env.gainCL)
+    # action = env.gainCL * obs #env.integrator()
+    obs, reward,strehl, done, info = env.step(i,action)  
+
+    obs = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1)
+
+    accu_reward+= reward
+
+    b= time.time()
+    # print('Elapsed time: ' + str(b-a) +' s')
+    # LE_PSF, SE_PSF = env.render(i)
+    # LE_PSF, SE_PSF = env.render4plot(i)
+    # env.render4plot(i)
+
+    # print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+    print(f"SR: {strehl * 100:.1f}%")
