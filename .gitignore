@@ -1,4 +1,7 @@
 logs/
+docs/
+README_old.md
+
 
 #Saved torch data
 *.pt

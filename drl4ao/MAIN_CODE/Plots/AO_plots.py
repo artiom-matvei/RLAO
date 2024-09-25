@@ -212,6 +212,7 @@ def basis_distribution(env):
     # zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
 
     for i in range(size):
+        env.tel.resetOPD()
         env.atm.generateNewPhaseScreen(23879744 * i)
         opd = env.tel.OPD.copy()
 
