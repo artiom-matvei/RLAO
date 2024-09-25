@@ -32,14 +32,14 @@ args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
 
 args.nLoop = 10000
-args.delay = 1
+# args.delay = 1
+show_opd = True
 
 for r0 in [0.13]:#, 0.0866666667]:
     args.r0 = r0
-    env = get_env(args)
+    # env = get_env(args)
     env.gainCL = 0.9
 
-    reconstructor.eval()
 
     for ws in [[10,12,11,15,20]]:#, [20,24,22,30,40]]:
         env.atm.windSpeed = ws
@@ -66,6 +66,7 @@ for r0 in [0.13]:#, 0.0866666667]:
         SRs = []
         SR_std = []
         rewards = []
+        frames_for_pwr = []
         accu_reward = 0
 
         obs = env.reset_soft()
@@ -83,6 +84,21 @@ for r0 in [0.13]:#, 0.0866666667]:
             # LE_PSF, SE_PSF = env.render(i)
             # LE_PSF, SE_PSF = env.render4plot(i)
             # env.render4plot(i)
+
+            if (strehl > 0.7)&(show_opd):
+                plt.imshow(env.tel.OPD)
+                show_opd = False
+
+            if (strehl > 0.7):
+                frames_for_pwr.append(env.tel.OPD)
+                print(len(frames_for_pwr))
+
+                env.atm.generateNewPhaseScreen(np.random.randint(0,1000))
+
+                if len(frames_for_pwr) == 100:
+                    np.save(savedir+'/OPD_frames.npy', np.array(frames_for_pwr))
+                    break
+
 
             print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
             print("SR: " +str(strehl))
