@@ -231,3 +231,7 @@ class Unet_big(nn.Module):
         x_out[:,:,self.xvalid, self.yvalid] = cropped_outputs[:,:,self.xvalid, self.yvalid]
 
         return x_out
+    
+
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
