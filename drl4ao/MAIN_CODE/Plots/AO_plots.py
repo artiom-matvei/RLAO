@@ -191,7 +191,7 @@ def basis_grid(env, len=4, modal=True):
         displayMap(env.tel.OPD - env.tel.OPD.mean())
 
 
-def basis_distribution(env):
+def basis_distribution(env, path=None):
     size = 100
     zonal_coefs = np.zeros((size, env.dm.nValidAct))
     modal_coefs = np.zeros((size, env.M2C_CL.shape[1]))
@@ -210,11 +210,16 @@ def basis_distribution(env):
     zernike_proj = np.matmul(np.linalg.inv(np.matmul(zernike_modes.T, zernike_modes)), zernike_modes.T)
 
     # zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
+    if path:
+        data = np.load(path)
 
     for i in range(size):
-        env.tel.resetOPD()
-        env.atm.generateNewPhaseScreen(23879744 * i)
-        opd = env.tel.OPD.copy()
+        if not path:
+            env.tel.resetOPD()
+            env.atm.generateNewPhaseScreen(21234 * i)
+            opd = env.tel.OPD.copy()
+        else:
+            opd = data[i]
 
         zonal_coefs[i] = np.matmul(zonal_proj, opd.reshape(res*res))
         modal_coefs[i] = np.matmul(zernike_proj, opd.reshape(res*res))

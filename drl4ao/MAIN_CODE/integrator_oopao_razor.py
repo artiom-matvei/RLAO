@@ -37,7 +37,7 @@ show_opd = True
 
 for r0 in [0.13]:#, 0.0866666667]:
     args.r0 = r0
-    # env = get_env(args)
+    env = get_env(args)
     env.gainCL = 0.9
 
 
@@ -85,18 +85,15 @@ for r0 in [0.13]:#, 0.0866666667]:
             # LE_PSF, SE_PSF = env.render4plot(i)
             # env.render4plot(i)
 
-            if (strehl > 0.7)&(show_opd):
-                plt.imshow(env.tel.OPD)
-                show_opd = False
 
             if (strehl > 0.7):
                 frames_for_pwr.append(env.tel.OPD)
                 print(len(frames_for_pwr))
 
-                env.atm.generateNewPhaseScreen(np.random.randint(0,1000))
+                env.atm.generateNewPhaseScreen(np.random.randint(0,100000))
 
-                if len(frames_for_pwr) == 100:
-                    np.save(savedir+'/OPD_frames.npy', np.array(frames_for_pwr))
+                if len(frames_for_pwr) == 500:
+                    np.save(savedir+'/OPD_frames_500.npy', np.array(frames_for_pwr))
                     break
 
 
