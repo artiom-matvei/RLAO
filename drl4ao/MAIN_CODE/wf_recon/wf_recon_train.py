@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
 import numpy as np
 
-from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
+from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file, data_from_stats
 from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet, Unet_big
 from Plots.plots import save_plots
 from types import SimpleNamespace
@@ -41,7 +41,7 @@ savedir = os.path.dirname(__file__)
 env = get_env(args)
 
 
-with open("papyrus_training_unet_200k.txt", "a") as f:
+with open("CL_finetune.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -122,8 +122,8 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_200k.npy'
-target_file_path = data_dir_path+'/dm_cmds_200k.npy'
+input_file_path = data_dir_path+'/wfs_frames_CL_200k.npy'
+target_file_path = data_dir_path+'/dm_cmds_CL_200k.npy'
 
 dm_shape = env.dm.coefs.shape
 wfs_shape=env.wfs.cam.frame.shape
@@ -132,19 +132,28 @@ D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape
 D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=200000)
 D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=200000)
 
-with open("papyrus_training_unet_200k.txt", "a") as f:  # 'a' mode appends to the file
+with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
 
-reconstructor = Unet_big(env.xvalid, env.yvalid)
-reconstructor = reconstructor.to(device)
+checkpoint = torch.load(savedir+'/models/useable/papyrus_best_model_unet_big_200k.pt',map_location=device)
+
+
+# Make sure to use the correct network before loading the state dict
+reconstructor = Unet_big(env.xvalid,env.yvalid)
+# Restore the regular model and optimizer state
+reconstructor.load_state_dict(checkpoint['model_state_dict'])
+
+# reconstructor = Unet_big(env.xvalid, env.yvalid)
+# reconstructor = reconstructor.to(device)
 
 # EMA of model parameters
 # ema_reconstructor = torch.optim.swa_utils.AveragedModel(reconstructor, \
 #     multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
 
-optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
+# optimizer = optim.Adam(reconstructor.parameters(), lr=0.0001)
+optimizer = optim.Adam(reconstructor.parameters(), lr=0.00001)
 criterion = nn.MSELoss()
 
 reconstructor.to(device)
@@ -161,14 +170,14 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/papyrus_best_model_unet_big_200k.pt'  # Path to save the best model
+save_path = savedir+'/models/tmp/finetune_CL.pt'  # Path to save the best model
 
-with open("papyrus_training_unet_200k.txt", "a") as f:  # 'a' mode appends to the file
+with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
 
-n_epochs = 150
+n_epochs = 75
 for epoch in range(n_epochs):
 
     start = time.time()
@@ -202,7 +211,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("papyrus_training_unet_200k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -233,7 +242,7 @@ for epoch in range(n_epochs):
     # avg_ema_val_loss = ema_val_loss/len(val_loader)
     # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("papyrus_training_unet_200k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -250,13 +259,13 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("papyrus_training_unet_200k.txt", "a") as f:  # 'a' mode appends to the file
+    with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_papyrus_unet_big_200k', train_losses)
-    np.save(savedir+'/losses/val_loss_papyrus_unet_big_200k', val_losses)
+    np.save(savedir+'/losses/train_loss_CL', train_losses)
+    np.save(savedir+'/losses/val_loss_CL', val_losses)
     # np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
@@ -280,9 +289,9 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_papyrus_unet_big_200k', train_losses)
-np.save(savedir+'/losses/val_loss_papyrus_unet_big_200k', val_losses)
+np.save(savedir+'/losses/train_loss_CL', train_losses)
+np.save(savedir+'/losses/val_loss_CL', val_losses)
 # np.save(savedir+'/losses/ema_val_loss_papyrus_unet_big_200k', ema_val_losses)
-torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet_big_200k.pt')
+# torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet_big_200k.pt')
 
 # %%

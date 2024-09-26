@@ -31,9 +31,8 @@ args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 #%%
 
 
-args.nLoop = 10000
+args.nLoop = 20000
 # args.delay = 1
-show_opd = True
 
 for r0 in [0.13]:#, 0.0866666667]:
     args.r0 = r0
