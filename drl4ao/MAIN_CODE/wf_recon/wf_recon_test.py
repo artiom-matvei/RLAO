@@ -229,7 +229,8 @@ plt.show()
 ### Closed loop test ### 
 
 reconstructor.eval()
-gain = 1
+c_int = 1.
+c_net = 1. - c_int
 
 env.atm.generateNewPhaseScreen(133)
 env.dm.coefs = 0
@@ -243,7 +244,7 @@ SR_std = []
 rewards = []
 accu_reward = 0
 
-x = env.reset_soft()
+slope = env.reset_soft()
 
 wfsf = env.wfs.cam.frame.copy()
 
@@ -252,17 +253,19 @@ obs = torch.tensor(wfsf).float().unsqueeze(1)
 args.nLoop = 500
 
 for i in range(args.nLoop):
-    reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+    # reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
 
-    with torch.no_grad():
-        action = - gain * np.sinh(reconstructor(reshaped_input).squeeze())
+    # with torch.no_grad():
+    #     action = -1 * (- c_int * 0.9 * slope + c_net * np.sinh(reconstructor(reshaped_input).squeeze()))
+
+    action = 0.9 * slope
 
     a=time.time()
     # print(env.gainCL)
     # action = env.gainCL * obs #env.integrator()
-    obs, reward,strehl, done, info = env.step(i,action)  
+    slope, reward,strehl, done, info = env.step(i,action)  
 
-    obs = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1)
+    # obs = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1)
 
     accu_reward+= reward
 
