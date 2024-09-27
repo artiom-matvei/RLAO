@@ -48,7 +48,7 @@ reconstructor.eval()
 args.nLoop = 5000
 #%%
 
-for c_int in [1., 0.85, 0.8, 0.75]:
+for c_int in [0.85, 0.8, 0.75]:
 
     c_net = 1. - c_int
 
@@ -86,7 +86,7 @@ for c_int in [1., 0.85, 0.8, 0.75]:
         if c_net > 0:
             reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
             with torch.no_grad():
-                action = c_int * int_action - c_net * np.sinh(reconstructor(reshaped_input).squeeze())
+                action = c_int * int_action - c_net * np.sinh(reconstructor(reshaped_input).squeeze()).detach().cpu().numpy()
 
         else:
             action = int_action
