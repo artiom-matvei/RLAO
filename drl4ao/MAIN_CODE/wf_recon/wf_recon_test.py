@@ -69,8 +69,51 @@ def load_model(model_path):
 
 # %%
 # Make some fresh data
-wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
-                        min_scale=1e-6, max_scale=1e-6)
+# wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
+#                         min_scale=1e-6, max_scale=1e-6)
+
+data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets/atm_stats'
+
+ds_size = 200000
+
+
+# %%
+# Set the random seed for reproducibility
+np.random.seed(432574358)
+
+# Shuffle the data indices
+indices = np.arange(ds_size)
+np.random.shuffle(indices)
+
+# Define the split ratios
+train_ratio = 0.8
+val_ratio = 0.1
+test_ratio = 0.1
+
+# Calculate the split indices
+train_size = int(train_ratio * ds_size)
+val_size = int(val_ratio * ds_size)
+
+# Get the corresponding indices for each set
+train_indices = indices[:train_size]
+val_indices = indices[train_size:train_size + val_size]
+test_indices = indices[train_size + val_size:]
+
+input_file_path = data_dir_path+'/wfs_frames_CL_200k.npy'
+target_file_path = data_dir_path+'/dm_cmds_CL_200k.npy'
+
+dm_shape = env.dm.coefs.shape
+wfs_shape=env.wfs.cam.frame.shape
+
+D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=200000)
+
+#%%
+wfsf = torch.zeros((3,4,24,24))
+dm_c = torch.zeros(3,1,357)
+
+for i in range(3):
+    wfsf[i], dm_c[i] = D_val.__getitem__(np.random.randint(0,20000))
+
 
 # %%
 
@@ -78,7 +121,7 @@ wfsf, dmc = make_diverse_dataset(env, size=1, num_scale=3,\
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/models/papyrus_best_model_unet_big_200k.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/tmp/finetune_CL.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
@@ -91,28 +134,28 @@ reconstructor.load_state_dict(checkpoint['model_state_dict'])
 # network = load_model(savedir+'/reconstructor_cmd_asinh.pt')
 reconstructor.eval()
 # Make predictions
-obs = torch.tensor(wfsf).float().unsqueeze(1)
+# obs = torch.tensor(wfsf).float().unsqueeze(1)
 
 
 
 
-mean = obs.mean(dim=[2, 3], keepdim=True)  # Mean over height and width dimensions
-std = obs.std(dim=[2, 3], keepdim=True)    # Std over height and width dimensions
+# mean = obs.mean(dim=[2, 3], keepdim=True)  # Mean over height and width dimensions
+# std = obs.std(dim=[2, 3], keepdim=True)    # Std over height and width dimensions
 
 # Perform mean subtraction and scaling by standard deviation
 # normalized_tensor = (obs - mean) / std
 
-reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3, 2, 4).contiguous().view(-1, 4, 24, 24)
+# reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3, 2, 4).contiguous().view(-1, 4, 24, 24)
 
 with torch.no_grad():
-    pred = reconstructor(reshaped_input)
+    pred = reconstructor(wfsf)
     # pred_OPD = OPD_model(network(obs), modes, res)
 
 
 # Run ground truth commands through the model
 
 # Reshape commands into image
-cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
+cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dm_c])
 
 # gt_opd = OPD_model(torch.tensor(cmd_img).unsqueeze(1), modes, res)
 
@@ -120,13 +163,19 @@ cmd_img = np.array([env.vec_to_img(torch.tensor(i).float()) for i in dmc])
 #%%
 fig, ax = plt.subplots(4,3, figsize=(10,13))
 
-vrange = .5
+vrange = .3
 
 for i in range(3):
-    cax1 = ax[0,i].imshow(wfsf[i+27])
-    cax2 = ax[1,i].imshow(pred[i+27].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
-    cax3 = ax[2,i].imshow(np.arcsinh(cmd_img[i+27] / 1e-6), vmin=-vrange, vmax=vrange)
-    cax4 = ax[3,i].imshow(np.arcsinh(cmd_img[i+27] / 1e-6) - pred[i+27].squeeze(0).detach().numpy(),\
+    top = torch.cat([wfsf[i][0], wfsf[i][1]], dim=1)  # Concatenate top wfsf i][along width
+    bottom = torch.cat([wfsf[i][2], wfsf[i][3]], dim=1)  # Concatenate bottom quarters along width
+
+    # Step 3: Concatenate the top and bottom parts along the height
+    stitched_image = torch.cat([top, bottom], dim=0)
+
+    cax1 = ax[0,i].imshow(stitched_image.detach().numpy())
+    cax2 = ax[1,i].imshow(pred[i].squeeze(0).detach().numpy(), vmin=-vrange, vmax=vrange)
+    cax3 = ax[2,i].imshow(cmd_img[i] , vmin=-vrange, vmax=vrange)
+    cax4 = ax[3,i].imshow(cmd_img[i]  - pred[i].squeeze(0).detach().numpy(),\
                                                                  vmin=-vrange, vmax=vrange)
 
 
@@ -149,7 +198,7 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'papyrus_unet_big_200k'
+tag = 'CL'
 
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
@@ -179,6 +228,14 @@ plt.show()
 # %%
 ### Closed loop test ### 
 
+reconstructor.eval()
+gain = 1
+
+env.atm.generateNewPhaseScreen(133)
+env.dm.coefs = 0
+
+env.tel*env.dm*env.wfs
+
 LE_PSFs= []
 SE_PSFs = []
 SRs = []
@@ -192,11 +249,13 @@ wfsf = env.wfs.cam.frame.copy()
 
 obs = torch.tensor(wfsf).float().unsqueeze(1)
 
+args.nLoop = 500
+
 for i in range(args.nLoop):
     reshaped_input = obs.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
 
     with torch.no_grad():
-        action = -1 * np.sinh(reconstructor(reshaped_input).squeeze())
+        action = - gain * np.sinh(reconstructor(reshaped_input).squeeze())
 
     a=time.time()
     # print(env.gainCL)
@@ -212,6 +271,17 @@ for i in range(args.nLoop):
     # LE_PSF, SE_PSF = env.render(i)
     # LE_PSF, SE_PSF = env.render4plot(i)
     # env.render4plot(i)
+    # if (i+1) % 100 == 0:
+    #     sr, std = env.calculate_strehl_AVG()
+    #     SRs.append(sr)
+    #     SR_std.append(std)
+    #     rewards.append(accu_reward)
+    #     accu_reward = 0
+    #     print(f'\n Frame {i} \n')
+
+    SRs.append(strehl)
+
 
     # print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-    print(f"SR: {strehl * 100:.1f}%")
+    print(f"Iter {i+1}, SR: {strehl * 100:.1f}%")
+# %%

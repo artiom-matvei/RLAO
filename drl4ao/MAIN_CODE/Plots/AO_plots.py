@@ -4,6 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from zernike import RZern
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -193,20 +194,26 @@ def basis_grid(env, len=4, modal=True):
 
 def basis_distribution(env, path=None):
     size = 100
+    res = env.dm.resolution
+    xpupil, ypupil = np.where(env.tel.pupil == 1)
+
     zonal_coefs = np.zeros((size, env.dm.nValidAct))
     modal_coefs = np.zeros((size, env.M2C_CL.shape[1]))
 
-    zonal_modes = env.dm.modes.copy()
+    zonal_modes = env.dm.modes.copy().reshape(res,res, -1)[xpupil, ypupil]
     zonal_proj = np.matmul(np.linalg.inv(np.matmul(zonal_modes.T, zonal_modes)), zonal_modes.T)
 
     # zonal_proj /= np.linalg.norm(zonal_proj, axis=1)[:, None]
 
     env.tel.resetOPD()
 
+
+
     env.dm.coefs = env.M2C_CL
     env.tel*env.dm
-    res = env.dm.resolution
-    zernike_modes = env.tel.OPD.copy().reshape(res*res, -1)
+    
+
+    zernike_modes = env.tel.OPD.copy()[xpupil, ypupil]
     zernike_proj = np.matmul(np.linalg.inv(np.matmul(zernike_modes.T, zernike_modes)), zernike_modes.T)
 
     # zernike_proj /= np.linalg.norm(zernike_proj, axis=1)[:, None]
@@ -221,8 +228,8 @@ def basis_distribution(env, path=None):
         else:
             opd = data[i]
 
-        zonal_coefs[i] = np.matmul(zonal_proj, opd.reshape(res*res))
-        modal_coefs[i] = np.matmul(zernike_proj, opd.reshape(res*res))
+        zonal_coefs[i] = np.matmul(zonal_proj, opd[xpupil, ypupil])
+        modal_coefs[i] = np.matmul(zernike_proj, opd[xpupil, ypupil])
 
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
     ax[0].plot(np.mean(np.square(zonal_coefs), axis=0), color='k')
@@ -232,6 +239,38 @@ def basis_distribution(env, path=None):
     ax[1].plot(np.mean(np.square(modal_coefs), axis=0), color='k')
     ax[1].set_yscale('log')
     ax[1].set_title('Power Spectrum of Atmosphere in Modal Basis')
+
+    plt.show()
+
+    return np.mean(np.square(modal_coefs), axis=0)
+
+
+def zernike_dist(env, M2OPD, path=None):
+    size = 500
+    xpupil, ypupil = np.where(env.tel.pupil == 1)
+
+    modal_coefs = np.zeros((size, M2OPD.shape[1]))
+
+
+    OPD2M = np.linalg.pinv(M2OPD)
+    
+    if path:
+        data = np.load(path)
+
+    for i in range(size):
+        if not path:
+            env.tel.resetOPD()
+            env.atm.generateNewPhaseScreen(21234 * i)
+            opd = env.tel.OPD.copy()
+        else:
+            opd = data[i]
+
+        modal_coefs[i] = np.matmul(OPD2M, opd[xpupil, ypupil])
+
+    plt.plot(np.mean(np.square(modal_coefs), axis=0), color='k')
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.title('Power Spectrum of Atmosphere in Modal Basis')
 
     plt.show()
 
@@ -448,4 +487,44 @@ def rmse_reconstruct(env, reconstructor, size=100, gain=0.2):
 
 
     return rmse_network, rmse_integrator
+# %%
+def make_M2OPD(env):
+
+    xpupil, ypupil = np.where(env.tel.pupil == 1)
+    mask = np.zeros((120,120))
+    mask[xpupil, ypupil] = 1
+
+    def downsample(mask, phi, res):
+
+        low_res = np.zeros(mask.shape)
+        n = 0
+        for i in range(mask.shape[0]):
+            k = 0
+            for j in range(mask.shape[1]):
+                low_res[i,j] = np.nanmean(phi[n:n+res,k:k+res])
+                k += res
+            n+= res
+        low_res[np.isnan(low_res)] = 0
+        low_res*=mask
+        return low_res
+
+
+    cart = RZern(25)
+    L, K = mask.shape
+    res = 5
+    ddx = np.linspace(-1.0, 1.0, K*res)
+    ddy = np.linspace(-1.0, 1.0, L*res)
+    xv, yv = np.meshgrid(ddx, ddy)
+    cart.make_cart_grid(xv, yv)
+
+    c = np.zeros(cart.nk)
+
+    M2OPD = np.empty((np.count_nonzero(mask), 300))
+    for i in range(300):
+        c *= 0.0
+        c[i+1] = 1.0
+        phi = downsample(mask, cart.eval_grid(c, matrix=True), res)
+        M2OPD[:,i] = phi[mask>0]
+
+    return M2OPD
 # %%
