@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'closed_loop_testing'
+savedir: 'long_closed_loop_testing'
 experiment_tag: test
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'

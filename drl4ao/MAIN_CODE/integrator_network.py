@@ -45,20 +45,21 @@ reconstructor.to(device)
 
 reconstructor.eval()
 
-args.nLoop = 500
+args.nLoop = 5000
+#%%
 
-
-for c_int in [0., 0.25, 0.5, 0.75, 1.]:
+for c_int in [1., 0.85, 0.8, 0.75]:
 
     c_net = 1. - c_int
 
-    env.atm.generateNewPhaseScreen(133)
+    env.atm.generateNewPhaseScreen(1333)
     env.dm.coefs = 0
 
     env.tel*env.dm*env.wfs
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
+    # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
+    savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
 
     print('Start make env')
     os.makedirs(savedir, exist_ok=True)
@@ -100,6 +101,10 @@ for c_int in [0., 0.25, 0.5, 0.75, 1.]:
         b= time.time()
         print('Elapsed time: ' + str(b-a) +' s')
 
+        with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
+            f.write(f"One training epoch took {b - a} seconds\n")
+
+
         print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
         print("SR: " +str(strehl))
         if (i+1) % 100 == 0:
@@ -116,3 +121,49 @@ for c_int in [0., 0.25, 0.5, 0.75, 1.]:
     torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
 
     print("Data Saved")
+
+# %%
+plt.style.use('ggplot')
+
+sr1 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-121922_test_1s_int_percent_1.0/sr2plot.pt')
+sr2 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-122042_test_1s_int_percent_0.75/sr2plot.pt')
+sr3 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-123609_test_1s_int_percent_0.5/sr2plot.pt')
+sr4 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-124914_test_1s_int_percent_0.25/sr2plot.pt')
+sr5 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-125821_test_1s_int_percent_0.0/sr2plot.pt')
+sr6 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-142153_test_1s_int_percent_0.85/sr2plot.pt')
+sr7 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-144920_test_1s_int_percent_0.8/sr2plot.pt')
+sr8 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-150439_test_1s_int_percent_0.7/sr2plot.pt')
+sr9 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-151441_test_1s_int_percent_0.65/sr2plot.pt')
+
+
+
+
+std1 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-121922_test_1s_int_percent_1.0/srstd2plot.pt')
+std2 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-122042_test_1s_int_percent_0.75/srstd2plot.pt')
+std3 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-123609_test_1s_int_percent_0.5/srstd2plot.pt')
+std4 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-124914_test_1s_int_percent_0.25/srstd2plot.pt')
+std5 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-125821_test_1s_int_percent_0.0/srstd2plot.pt')
+std6 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-142153_test_1s_int_percent_0.85/srstd2plot.pt')
+std7 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-144920_test_1s_int_percent_0.8/srstd2plot.pt')
+std8 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-150439_test_1s_int_percent_0.7/srstd2plot.pt')
+std9 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/closed_loop_testing/integrator/20240927-151441_test_1s_int_percent_0.65/srstd2plot.pt')
+
+
+plt.errorbar(np.arange(1,6), sr1, yerr=std1, fmt='o', capsize=5, label=f'Network {0}%')
+plt.errorbar(np.arange(1,6), sr2, yerr=std2, fmt='o', capsize=5, label=f'Network {25}%')
+# plt.errorbar(np.arange(1,6), sr3, yerr=std3, fmt='o', capsize=5,label=f'Network {50}%')
+# plt.errorbar(np.arange(1,6), sr4, yerr=std4, fmt='o', capsize=5,label=f'Network {75}%')
+# plt.errorbar(np.arange(1,6), sr5, yerr=std5, fmt='o', capsize=5, label=f'Network {100}%')
+plt.errorbar(np.arange(1,6), sr6, yerr=std6, fmt='o', capsize=5, label=f'Network {15}%')
+plt.errorbar(np.arange(1,6), sr7, yerr=std7, fmt='o', capsize=5, label=f'Network {20}%')
+# plt.errorbar(np.arange(1,6), sr8, yerr=std8, fmt='o', capsize=5, label=f'Network {30}%')
+# plt.errorbar(np.arange(1,6), sr9, yerr=std9, fmt='o', capsize=5, label=f'Network {35}%')
+
+
+
+plt.legend()
+plt.title('Mean Strehl over 100 frames')
+plt.ylabel('SR')
+plt.xlabel('Episode')
+plt.show()
+# %%
