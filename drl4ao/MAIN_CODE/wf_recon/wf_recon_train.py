@@ -3,6 +3,7 @@ import os,sys
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -12,7 +13,7 @@ import time
 import numpy as np
 
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file, data_from_stats
-from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet, Unet_big
+from ML_stuff.models import Unet_big, create_edge_weight_matrix
 from Plots.plots import save_plots
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
@@ -170,7 +171,22 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/tmp/finetune_CL.pt'  # Path to save the best model
+save_path = savedir+'/models/tmp/edgetune_CL.pt'  # Path to save the best model
+
+
+# Parameters
+batch_size, channels, height, width = 64, 1, 21, 21
+center = [10,10]  # Assuming the circle is centered
+radius = 10.5  # Adjust radius as needed
+sigma = 10  # Controls the spread of the weights around the boundary
+
+# Create the edge weight matrix
+weight_matrix = create_edge_weight_matrix(height, width, center, radius, sigma)
+
+# Expand the weight matrix to match the dimensions of elementwise_loss
+weight_matrix = weight_matrix.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, height, width]
+# weight_matrix = weight_matrix.expand(batch_size, channels, height, width)
+
 
 with open("CL_finetune.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
@@ -195,7 +211,15 @@ for epoch in range(n_epochs):
         outputs = env.img_to_vec(reconstructor(inputs))
 
         # Get the OPD from the model
-        loss = criterion(outputs, targets)
+        # loss = criterion(outputs, targets)
+
+        elementwise_loss = F.mse_loss(outputs, targets, reduction='none') 
+
+        # Apply the weight matrix
+        weighted_loss = elementwise_loss * env.img_to_vec(weight_matrix)
+        # Compute the mean of the weighted loss
+        loss = weighted_loss.mean()
+
         
         # Backward pass and optimization
         loss.backward()
@@ -230,7 +254,15 @@ for epoch in range(n_epochs):
             # ema_outputs = env.img_to_vec(ema_reconstructor(inputs))
 
 
-            loss = criterion(outputs, targets)
+            # loss = criterion(outputs, targets)
+
+            elementwise_loss = F.mse_loss(outputs, targets, reduction='none') 
+
+            # Apply the weight matrix
+            weighted_loss = elementwise_loss * env.img_to_vec(weight_matrix)
+            # Compute the mean of the weighted loss
+            loss = weighted_loss.mean()
+
             val_loss += loss.item()
 
             # ema_loss = criterion(ema_outputs, targets)

@@ -5,7 +5,7 @@
 #SBATCH --mem=40G                        # memory per node
 #SBATCH --time=00-01:59         # time (DD-HH:MM)
 #SBATCH --account=def-lplevass
-#SBATCH --job-name=CL_fintune
+#SBATCH --job-name=weighted_edge
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=parker.levesque@gmail.com
 

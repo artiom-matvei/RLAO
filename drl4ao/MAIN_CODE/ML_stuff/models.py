@@ -232,6 +232,24 @@ class Unet_big(nn.Module):
 
         return x_out
     
-
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+
+def create_edge_weight_matrix(height, width, center, radius, sigma):
+    y_coords = torch.arange(height).unsqueeze(1).repeat(1, width).float()
+    x_coords = torch.arange(width).unsqueeze(0).repeat(height, 1).float()
+
+    # Move tensors to the same device as outputs
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    y_coords = y_coords.to(device)
+    x_coords = x_coords.to(device)
+
+    # Calculate the distance from each pixel to the center
+    dist_from_center = torch.sqrt((x_coords - center[0]) ** 2 + (y_coords - center[1]) ** 2)
+
+    # Compute the weight matrix using a Gaussian function centered at the circle's radius
+    weight_matrix = torch.exp(-((dist_from_center - radius) ** 2) / (2 * sigma ** 2))
+
+    # Shape: [height, width]
+    return weight_matrix

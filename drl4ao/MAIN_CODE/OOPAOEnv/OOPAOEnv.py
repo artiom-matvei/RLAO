@@ -66,6 +66,7 @@ class OOPAO(gym.Env):
         self.xvalid = None
         self.yvalid = None
 
+        self.leak = 0.99
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -308,6 +309,7 @@ class OOPAO(gym.Env):
         # initialize DM commands
         self.tel.resetOPD()
         self.dm.coefs=0
+        self.dm_prev = self.dm.coefs.copy()
         self.ngs*self.tel*self.dm*self.wfs
         self.wfs*self.wfs.focal_plane_camera
 
@@ -500,7 +502,8 @@ class OOPAO(gym.Env):
         # Integrator
         # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
         
-        self.dm.coefs += action 
+        self.dm.coefs = (self.dm_prev * self.leak) + action 
+        self.dm_prev = self.dm.coefs.copy()
     
 
         # store the slopes after computing the commands => 2 frames delay
