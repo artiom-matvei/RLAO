@@ -45,10 +45,18 @@ reconstructor.to(device)
 
 reconstructor.eval()
 
-args.nLoop = 5000
+args.nLoop = 1000
+
+env.tel.resetOPD()
+env.tel.computePSF(4)
+
+psf_model_max = env.tel.PSF.max()
+
 #%%
 
-for c_int in [0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.]:# [1, 0.85, 0.8, 0.75]:
+
+
+for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
 
     c_net = 1. - c_int
 
@@ -72,6 +80,8 @@ for c_int in [0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.]:# [1, 0
     SR_std = []
     rewards = []
     accu_reward = 0
+
+    LE_SR = []
 
     use_net = True
     reset_counter = 0
@@ -108,8 +118,11 @@ for c_int in [0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.]:# [1, 0
         b= time.time()
         print('Elapsed time: ' + str(b-a) +' s')
 
-        # if reset_counter == 50:
-        #     use_net = False
+        env.tel.computePSF(4)
+        SE_PSFs.append(env.tel.PSF)
+
+        LE_SR.append(np.mean(SE_PSFs)/psf_model_max)
+
 
         print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
         print("SR: " +str(strehl))
@@ -128,6 +141,7 @@ for c_int in [0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.]:# [1, 0
     torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
     torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
     torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
+    torch.save(LE_SR, os.path.join(savedir, "LE_SR.pt"))
 
     print("Data Saved")
 
@@ -147,11 +161,6 @@ for i in x[5:8]:
     
     lsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_{i}/sr2plot.pt')
     plt.errorbar(np.arange(1,51), lsr2, yerr=slsr2, fmt='o', capsize=5, label=f'Network {(1 - i)*100:.0f}%')
-
-
-
-
-
 
 plt.legend()
 plt.title('Mean Strehl over 100 frames')

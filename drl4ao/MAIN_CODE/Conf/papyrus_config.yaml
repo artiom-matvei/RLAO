@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'edge_correction_leak'
+savedir: 'LE_compare'
 experiment_tag: test
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'

@@ -45,11 +45,11 @@ class TimeDelayEnv(gym.Wrapper):
 
     def step(self, i, action):
         self.action_buffer.append(action)
-        obs, reward, strehl, done, info = self._env.step(i, self.action_buffer[0])
+        obs, wfsf, reward, strehl, done, info = self._env.step(i, self.action_buffer[0])
 
         del self.action_buffer[0]
 
-        return obs, reward, strehl, done, info
+        return obs, wfsf, reward, strehl, done, info
 
 
 class EfficientExperienceReplay():
@@ -208,9 +208,9 @@ class TorchWrapper(gym.Wrapper):
     
     def step(self, i,action):
         action_to_numpy = action.numpy()
-        next_obs, reward,strehl, done, info = self._env.step(i,action_to_numpy) 
+        next_obs, wfsf, reward,strehl, done, info = self._env.step(i,action_to_numpy) 
 
-        return torch.tensor(next_obs, dtype=torch.float32), reward,strehl, done, [(k, torch.tensor(v, dtype=torch.float32)) for k, v in info.items()]
+        return torch.tensor(next_obs, dtype=torch.float32), wfsf, reward,strehl, done, [(k, torch.tensor(v, dtype=torch.float32)) for k, v in info.items()]
     
     def reset(self):
         obs = self._env.reset()
