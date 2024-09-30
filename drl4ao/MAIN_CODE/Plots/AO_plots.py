@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from zernike import RZern
+from scipy.optimize import curve_fit
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -249,13 +250,15 @@ def zernike_dist(env, M2OPD, path=None):
     size = 500
     xpupil, ypupil = np.where(env.tel.pupil == 1)
 
-    modal_coefs = np.zeros((size, M2OPD.shape[1]))
-
-
+    
     OPD2M = np.linalg.pinv(M2OPD)
     
     if path:
         data = np.load(path)
+
+        size = len(data)
+
+    modal_coefs = np.zeros((size, M2OPD.shape[1]))
 
     for i in range(size):
         if not path:
@@ -267,14 +270,34 @@ def zernike_dist(env, M2OPD, path=None):
 
         modal_coefs[i] = np.matmul(OPD2M, opd[xpupil, ypupil])
 
-    plt.plot(np.mean(np.square(modal_coefs), axis=0), color='k')
+    pwr = np.mean(np.square(modal_coefs), axis=0)
+
+    def linear_function(x, a, b):
+        return a * x + b
+
+    # Sample data: x and y
+    x_data = np.log(np.arange(1,51))
+    y_data = np.log(pwr[:50])
+
+    # Perform curve fitting
+    params, covariance = curve_fit(linear_function, x_data, y_data)
+
+    # Get the slope (a) and intercept (b) from the fitting
+    slope, intercept = params
+
+    # Generate fitted y values
+    fitted_y = linear_function(x_data, slope, intercept)
+
+
+    plt.plot(pwr, color='k')
+    plt.plot(np.exp(fitted_y), color='r')
     plt.yscale('log')
     plt.xscale('log')
     plt.title('Power Spectrum of Atmosphere in Modal Basis')
 
     plt.show()
 
-    return np.mean(np.square(modal_coefs), axis=0)
+    return pwr, np.exp(fitted_y)
 
 
 # ANIMATE THE IM
