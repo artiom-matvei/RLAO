@@ -48,7 +48,7 @@ reconstructor.eval()
 args.nLoop = 5000
 #%%
 
-for c_int in [0.70, 0.65, 0.60]:# [1, 0.85, 0.8, 0.75]:
+for c_int in [0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.]:# [1, 0.85, 0.8, 0.75]:
 
     c_net = 1. - c_int
 
@@ -98,7 +98,7 @@ for c_int in [0.70, 0.65, 0.60]:# [1, 0.85, 0.8, 0.75]:
         else:
             action = int_action
 
-        obs, reward,strehl, done, info = env.step(i,action)  
+        obs,_, reward,strehl, done, info = env.step(i,action)  
 
         if c_net>0:
             wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
@@ -134,35 +134,22 @@ for c_int in [0.70, 0.65, 0.60]:# [1, 0.85, 0.8, 0.75]:
 # %%
 plt.style.use('ggplot')
 
-lsr1 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_1/sr2plot.pt')
-lsr2 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.85/sr2plot.pt')
-lsr3 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.8/sr2plot.pt')
-lsr4 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.75/sr2plot.pt')
+x = [0.85, 0.8,  0.75, 0.7,  0.65, 0.6,  0.55, 0.5,  0.45, 0.4,  0.35,
+ 0.3,  0.25, 0.2,  0.15, 0.1,  0.05]
 
-lsr5 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.7/sr2plot.pt')
-lsr6 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.65/sr2plot.pt')
-lsr7 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.6/sr2plot.pt')
-
+lsr1 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_1/sr2plot.pt')
 slsr1 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_1/srstd2plot.pt')
-slsr2 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.85/srstd2plot.pt')
-slsr3 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.8/srstd2plot.pt')
-slsr4 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.75/srstd2plot.pt')
-
-slsr5 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.7/srstd2plot.pt')
-slsr6 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.65/srstd2plot.pt')
-slsr7 = torch.load('/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_0.6/srstd2plot.pt')
-
-
 plt.errorbar(np.arange(1,51), lsr1, yerr=slsr1, fmt='o', capsize=5, label=f'Network {0}%')
-plt.errorbar(np.arange(1,51), lsr2, yerr=slsr2, fmt='o', capsize=5, label=f'Network {15}%')
-# plt.errorbar(np.arange(1,51), lsr3, yerr=slsr3, fmt='o', capsize=5,label=f'Network {50}%')
-# plt.errorbar(np.arange(1,51), lsr4, yerr=slsr4, fmt='o', capsize=5,label=f'Network {75}%')
-# plt.errorbar(np.arange(1,51), lsr5, yerr=slsr5, fmt='o', capsize=5, label=f'Network {100}%')
-plt.errorbar(np.arange(1,51), lsr3, yerr=slsr3, fmt='o', capsize=5, label=f'Network {20}%')
-plt.errorbar(np.arange(1,51), lsr4, yerr=slsr4, fmt='o', capsize=5, label=f'Network {25}%')
-plt.errorbar(np.arange(1,51), lsr5, yerr=slsr5, fmt='o', capsize=5, label=f'Network {30}%')
-plt.errorbar(np.arange(1,51), lsr6, yerr=slsr6, fmt='o', capsize=5, label=f'Network {35}%')
-plt.errorbar(np.arange(1,51), lsr7, yerr=slsr7, fmt='o', capsize=5, label=f'Network {40}%')
+
+
+for i in x[5:8]:
+    slsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_{i}/srstd2plot.pt')
+    
+    lsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/edge_correction_leak/integrator/test_10s_int_percent_{i}/sr2plot.pt')
+    plt.errorbar(np.arange(1,51), lsr2, yerr=slsr2, fmt='o', capsize=5, label=f'Network {(1 - i)*100:.0f}%')
+
+
+
 
 
 

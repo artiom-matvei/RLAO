@@ -68,6 +68,7 @@ class OOPAO(gym.Env):
 
         self.leak = 0.99
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.network = None
 
 
     def reset(self):
@@ -528,8 +529,9 @@ class OOPAO(gym.Env):
         info = {"strehl":strehl}
         done = 0
 
+        wfsf = self.wfs.cam.frame
 
-        return obs, -1 * np.linalg.norm(obs), strehl,bool(done), info
+        return obs, wfsf, -1 * np.linalg.norm(obs), strehl,bool(done), info
     
     def calculate_strehl_AVG(self):
         """Calculates the average strehl ratio for each episode.
@@ -585,3 +587,15 @@ class OOPAO(gym.Env):
         return action_out
 
         
+    def load_network(self, path, model):
+
+        checkpoint = torch.load(path ,map_location=self.device)
+
+        # Make sure to use the correct network before loading the state dict
+        self.network = model(self.xvalid,self.yvalid)
+        # Restore the regular model and optimizer state
+        self.network.load_state_dict(checkpoint['model_state_dict'])
+
+        self.network.to(self.device)
+
+        self.network.eval()

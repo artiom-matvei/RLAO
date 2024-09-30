@@ -31,7 +31,7 @@ def get_env(args):
     return TorchWrapper(env)
 
 @torch.no_grad()
-def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration): 
+def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration, use_recon=False, reconstructor=None): 
     """Run an entire Episode (based on max-ts = number of frames per Episode).
     :param: env, past_obs, past_act, obs, replay, policy, dynamics, sigma, writer: SummaryWriter, episode,iteration
     :return env.calculate_strehl_AVG(): Average Strehl ration in the Episode, float. 
@@ -44,8 +44,19 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
     dynamics.eval()
     policy.eval()
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    env.atm.generateNewPhaseScreen(93234 * iteration)
+    env.dm.coefs = 0
+
+    env.tel*env.dm*env.wfs
+
 
     obs = env.reset_soft()
+
+    if use_recon:
+        wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
+
 
     reward_sum = 0
     rewards = []
@@ -55,19 +66,35 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
             past_act = torch.zeros(1, (n_history-1), *obs.shape).squeeze(2)
     
     for t in range(max_ts):
-        simulated_obs = obs.unsqueeze(0)
+
+        int_action = env.gainCL * obs.unsqueeze(0)
+
+        if use_recon:
+            reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+            with torch.no_grad():
+                tensor_output = reconstructor(reshaped_input).squeeze()
+                numpy_output = torch.sinh(tensor_output)  # Now convert to NumPy
+                action = 0.6 * int_action - (1 - 0.6) * numpy_output
+
+        else:
+            action = int_action
+
+
+        # simulated_obs = obs.unsqueeze(0)
+
+        simulated_obs = action
 
 
         if  episode < warmup_ts:
-            action = 0.5 * obs.unsqueeze(0)
+            # action = env.gainCL * obs.unsqueeze(0)
             # action = action + torch.randn_like(action) * sigma
             action = action + env.sample_noise(sigma)
         else:            
             action = policy(simulated_obs.squeeze(0), torch.cat([past_obs, past_act],dim = 1))  
             action = action.squeeze(0)                                               
         
-        next_obs, reward,strehl, done, _ = env.step(t,action.squeeze())
-     
+        next_obs, wfsf, reward,strehl, done, _ = env.step(t,action.squeeze())
+
 
         # roll telemetry data with new data
         past_obs = torch.cat([past_obs[:,1:,:,:], obs.unsqueeze(0).unsqueeze(0)], dim = 1) 
