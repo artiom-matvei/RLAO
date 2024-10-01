@@ -68,7 +68,7 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
     print('Start make env')
     os.makedirs(savedir, exist_ok=True)
 
-    for i in range(10):
+    for j in range(10):
         print("Running loop...")
 
         env.atm.generateNewPhaseScreen(9323 * i)
@@ -144,7 +144,7 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
         torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
         torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
         torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
-        torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{i}.pt"))
+        torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{j}.pt"))
 
         print("Data Saved")
 
