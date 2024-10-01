@@ -71,7 +71,7 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
     for j in range(10):
         print("Running loop...")
 
-        env.atm.generateNewPhaseScreen(9323 * i)
+        env.atm.generateNewPhaseScreen(9323 * j)
         env.dm.coefs = 0
 
         env.tel*env.dm*env.wfs
@@ -187,4 +187,26 @@ plt.ylabel('SR')
 plt.xlabel('Frame Number')
 # plt.xlim(30,40)
 plt.show()
+# %%
+
+# Create a matrix of distances to the center of the PSF
+
+def distance_matrix(n, c_row, c_col):
+    # Create a grid of indices
+    i, j = np.indices((n, n))
+    
+    # Calculate the distance for each pixel
+    distances = np.sqrt((i - c_row)**2 + (j - c_col)**2)
+    
+    return distances
+
+i_c, j_c = np.where(env.tel.PSF == env.tel.PSF.max())
+
+r = distance_matrix(env.tel.PSF.shape[0], i_c, j_c)
+
+max_radius = 50
+mesh = np.linspace(0, max_radius, max_radius*2)
+
+psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len(mesh)-1)]
+
 # %%
