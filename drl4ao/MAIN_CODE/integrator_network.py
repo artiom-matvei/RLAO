@@ -60,10 +60,6 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
 
     c_net = 1. - c_int
 
-    env.atm.generateNewPhaseScreen(932343)
-    env.dm.coefs = 0
-
-    env.tel*env.dm*env.wfs
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
@@ -72,78 +68,85 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
     print('Start make env')
     os.makedirs(savedir, exist_ok=True)
 
-    print("Running loop...")
+    for i in range(10):
+        print("Running loop...")
 
-    LE_PSFs= []
-    SE_PSFs = []
-    SRs = []
-    SR_std = []
-    rewards = []
-    accu_reward = 0
+        env.atm.generateNewPhaseScreen(9323 * i)
+        env.dm.coefs = 0
 
-    LE_SR = []
+        env.tel*env.dm*env.wfs
 
-    use_net = True
-    reset_counter = 0
 
-    obs = env.reset_soft()
+        LE_PSFs= []
+        SE_PSFs = []
+        SRs = []
+        SR_std = []
+        rewards = []
+        accu_reward = 0
 
-    if c_net > 0:
-        wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
+        LE_SR = []
 
-    for i in range(args.nLoop):
-        a=time.time()
+        use_net = True
+        reset_counter = 0
 
-        reset_counter += 1
+        obs = env.reset_soft()
 
-        int_action = env.gainCL * obs
-
-        if (c_net > 0)&(use_net):
-            reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
-            with torch.no_grad():
-                tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
-                numpy_output = np.sinh(tensor_output.numpy())  # Now convert to NumPy
-                action = c_int * int_action - c_net * numpy_output
-
-        else:
-            action = int_action
-
-        obs,_, reward,strehl, done, info = env.step(i,action)  
-
-        if c_net>0:
+        if c_net > 0:
             wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
 
-        accu_reward+= reward
+        for i in range(args.nLoop):
+            a=time.time()
 
-        b= time.time()
-        print('Elapsed time: ' + str(b-a) +' s')
+            reset_counter += 1
 
-        env.tel.computePSF(4)
-        SE_PSFs.append(env.tel.PSF)
+            int_action = env.gainCL * obs
 
-        LE_SR.append(np.mean(SE_PSFs)/psf_model_max)
+            if (c_net > 0)&(use_net):
+                reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+                with torch.no_grad():
+                    tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
+                    numpy_output = np.sinh(tensor_output.numpy())  # Now convert to NumPy
+                    action = c_int * int_action - c_net * numpy_output
+
+            else:
+                action = int_action
+
+            obs,_, reward,strehl, done, info = env.step(i,action)  
+
+            if c_net>0:
+                wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
+
+            accu_reward+= reward
+
+            b= time.time()
+            print('Elapsed time: ' + str(b-a) +' s')
+
+            env.tel.computePSF(4)
+            SE_PSFs.append(env.tel.PSF)
+
+            LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
 
 
-        print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-        print("SR: " +str(strehl))
-        if (i+1) % 100 == 0:
-            sr, std = env.calculate_strehl_AVG()
-            SRs.append(sr)
-            SR_std.append(std)
-            rewards.append(accu_reward)
-            accu_reward = 0
+            print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+            print("SR: " +str(strehl))
+            if (i+1) % 100 == 0:
+                sr, std = env.calculate_strehl_AVG()
+                SRs.append(sr)
+                SR_std.append(std)
+                rewards.append(accu_reward)
+                accu_reward = 0
 
-            use_net = True
-            reset_counter = 0
+                use_net = True
+                reset_counter = 0
 
-    print(rewards)
-    print("Saving Data")
-    torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
-    torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
-    torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
-    torch.save(LE_SR, os.path.join(savedir, "LE_SR.pt"))
+        print(rewards)
+        print("Saving Data")
+        torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+        torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+        torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
+        torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{i}.pt"))
 
-    print("Data Saved")
+        print("Data Saved")
 
 # %%
 plt.style.use('ggplot')
@@ -167,5 +170,21 @@ plt.title('Mean Strehl over 100 frames')
 plt.ylabel('SR')
 plt.xlabel('Episode')
 plt.xlim(30,40)
+plt.show()
+# %%
+plt.style.use('ggplot')
+
+x = [0.0,0.6,1]
+
+for i in x:
+    slsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/LE_compare/integrator/test_2s_int_percent_{i}/LE_SR.pt')
+    print(slsr2)
+    plt.plot(slsr2, label=f'Network {(1 - i)*100:.0f}%')
+
+plt.legend()
+plt.title('Long Exposure SR')
+plt.ylabel('SR')
+plt.xlabel('Frame Number')
+# plt.xlim(30,40)
 plt.show()
 # %%
