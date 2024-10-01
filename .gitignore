@@ -13,7 +13,9 @@ README_old.md
 losses/
 datasets/
 
-*.DS_Store
+.DS_Store
+drl4ao/.DS_Store
+drl4ao/MAIN_CODE/.DS_Store
 
 inputs/
 targets/
