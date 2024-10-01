@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from zernike import RZern
 from scipy.optimize import curve_fit
+import matplotlib.animation as animation, PillowWriter
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -336,6 +337,77 @@ def animate_im(env, frame_rate=10):
 
 
     return
+
+def animate_CL(env, frame_rate=10):
+    env.tel.resetOPD()
+    env.tel.computePSF(4)
+    psf_model_max = np.max(env.tel.PSF)
+
+    env.atm.generateNewPhaseScreen(9323)
+    env.dm.coefs = 0
+
+    env.tel*env.dm*env.wfs
+
+
+    LE_PSFs= []
+    SE_PSFs = []
+    LE_SR = []
+
+    length = 100
+
+
+    obs = env.reset_soft()
+
+    for i in range(length):
+
+        action = env.gainCL * obs
+
+        obs,_, reward,strehl, done, info = env.step(i,action)  
+
+
+        env.tel.computePSF(4)
+        SE_PSFs.append(np.log10(env.tel.PSF)[175:-175, 175:-175])
+        LE_PSFs.append(np.mean(SE_PSFs, axis=0))
+
+        LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
+
+        if i%10 == 0:
+            print(f'Progress {i}/{length}')
+
+
+    both = np.concatenate([SE_PSFs, LE_PSFs])
+    create_gif(both, frame_rate, 'psf_animation.gif')
+
+def animate_sr(SR):
+    t = np.arange(len(SR))  # time values
+    data = np.array(SR)  # example time series (sine wave)
+
+    # Create the figure and axis
+    fig, ax = plt.subplots(figsize=(7,3))
+    ax.set_xlim(t.min(), t.max())
+    ax.set_ylim(data.min(), data.max() + data.max()/100)
+    ax.set_title('Long Exposure Strehl Ratio')
+
+    # Initialize a line object that will be updated during animation
+    line, = ax.plot([], [], lw=2)
+
+    # Function to initialize the plot
+    def init():
+        line.set_data([], [])
+        return line,
+
+    # Function to update the plot on each frame
+    def update(frame):
+        line.set_data(t[:frame], data[:frame])
+        return line,
+
+    # Create an animation object
+    ani = animation.FuncAnimation(fig, update, frames=len(t), init_func=init, blit=True, interval=20)
+
+    writer = PillowWriter(fps=10)
+    ani.save('sr.gif', writer=writer, dpi=200)
+    plt.close(fig)
+
 
 
 
