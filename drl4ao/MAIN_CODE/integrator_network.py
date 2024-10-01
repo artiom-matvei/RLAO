@@ -71,7 +71,7 @@ for c_int in [1, 0.6, 0.]:# [1, 0.85, 0.8, 0.75]:
     for j in range(10):
         print("Running loop...")
 
-        env.atm.generateNewPhaseScreen(9323 * i)
+        env.atm.generateNewPhaseScreen(9323 * j)
         env.dm.coefs = 0
 
         env.tel*env.dm*env.wfs
