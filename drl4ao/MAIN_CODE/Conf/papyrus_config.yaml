@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'LE_compare'
+savedir: 'redo_wf_vs_int'
 experiment_tag: test
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'

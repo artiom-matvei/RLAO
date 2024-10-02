@@ -561,14 +561,15 @@ class OOPAO(gym.Env):
 
         return reward
     
-    def sample_noise(self, sigma):
+    def sample_noise(self, sigma, use_torch=False):
 
         noise = self.F @ (sigma * np.random.normal(0,1 , size = (int(self.dm.nValidAct),))) # 357
-        return self.vec_to_img(noise)
+        noise = torch.tensor(noise).float().to(self.device)
+        return self.vec_to_img(noise, use_torch)
     
     def vec_to_img(self, action_vec, use_torch=False):
         if use_torch:
-            valid_actus = torch.zeros((self.nActuator, self.nActuator)).to(self.device)
+            valid_actus = torch.zeros((self.nActuator, self.nActuator)).float().to(self.device)
 
         else:
             valid_actus = np.zeros((self.nActuator, self.nActuator))

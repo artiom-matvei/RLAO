@@ -207,7 +207,7 @@ class TorchWrapper(gym.Wrapper):
         self._env = env
     
     def step(self, i,action):
-        action_to_numpy = action.numpy()
+        action_to_numpy = action.cpu().numpy()
         next_obs, wfsf, reward,strehl, done, info = self._env.step(i,action_to_numpy) 
 
         return torch.tensor(next_obs, dtype=torch.float32), wfsf, reward,strehl, done, [(k, torch.tensor(v, dtype=torch.float32)) for k, v in info.items()]

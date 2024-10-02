@@ -34,14 +34,9 @@ from types import SimpleNamespace
 import matplotlib.pyplot as plt
 
 
-#%%
 # args = SimpleNamespace(**read_yaml_file('Conf/razor_config_po4ao.yaml'))
 args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
-
-# %%
-
-# if __name__=='__main__':
 
 args.delay = 1
 
@@ -50,7 +45,8 @@ args.delay = 1
 for r0 in [0.13, 0.0866666667]:
     args.r0 = r0
     env = get_env(args)
-    env.gainCL = 0.3
+
+    env.gainCL = 0.9
 
     for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws
@@ -117,7 +113,7 @@ for r0 in [0.13, 0.0866666667]:
             
             start = time.time()
             
-            strehl, reward_sum, past_obs, obs, rewards,iteration  = run(env, past_obs, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration, reconstructor=reconstructor)
+            strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration, reconstructor=reconstructor)
 
             if reward_sum < -46:
                 converged = 1

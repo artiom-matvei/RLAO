@@ -18,7 +18,7 @@ class ConvDynamics(nn.Module):
         self.n_history = n_history
 
         self.net = nn.Sequential(
-            nn.Conv2d(n_history*2, n_filt, 3, padding=1),
+            nn.Conv2d(n_history * 2, n_filt, 3, padding=1),
             nn.LeakyReLU(),
             
             nn.Conv2d(n_filt, n_filt, 3, padding=1),
@@ -64,7 +64,7 @@ class ConvPolicy(nn.Module):
         self.register_buffer('F', F.unsqueeze(0))
 
         self.net = nn.Sequential(
-            nn.Conv2d(n_history, n_filt, 3, padding=1),
+            nn.Conv2d(n_history * 2 -1, n_filt, 3, padding=1),
             nn.LeakyReLU(),
             nn.Conv2d(n_filt, n_filt, 3, padding=1),
             nn.LeakyReLU(),

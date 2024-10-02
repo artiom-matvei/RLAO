@@ -30,34 +30,30 @@ from PO4AO.mbrl import get_env
 args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 #%%
 
+args.delay = 1
 
-args.nLoop = 20000
-# args.delay = 1
+args.nLoop = 1000
 
-for r0 in [0.13]:#, 0.0866666667]:
+for r0 in [0.13, 0.0866666667]:
     args.r0 = r0
-    env = get_env(args)
+    # env = get_env(args)
     env.gainCL = 0.9
 
 
-    for ws in [[10,12,11,15,20]]:#, [20,24,22,30,40]]:
+    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws
         env.atm.generateNewPhaseScreen(17)
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'r0_{r0}_ws_{ws}_gain_{env.gainCL}'
-        
+        # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'r0_{r0}_ws_{ws}_gain_{env.gainCL}'
+        savedir = '../../logs/can_delete/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'+"_"+f'r0_{r0}_ws_{ws}_gain_{env.gainCL}'
+
         print('Start make env')
         os.makedirs(savedir, exist_ok=True)
 
 
         print('Done change gain')
-        # obj = env.reset()
 
-        # print(type(env))
-        # print(obj)
-
-        # env.render(1)
         print("Running loop...")
 
         LE_PSFs= []
@@ -74,7 +70,7 @@ for r0 in [0.13]:#, 0.0866666667]:
             a=time.time()
             # print(env.gainCL)
             action = env.gainCL * obs #env.integrator()
-            obs, reward,strehl, done, info = env.step(i,action)  
+            obs,_, reward,strehl, done, info = env.step(i,action)  
 
             accu_reward+= reward
 
@@ -85,17 +81,6 @@ for r0 in [0.13]:#, 0.0866666667]:
             # env.render4plot(i)
 
 
-            if (strehl > 0.7):
-                frames_for_pwr.append(env.tel.OPD)
-                print(len(frames_for_pwr))
-
-                env.atm.generateNewPhaseScreen(np.random.randint(0,100000))
-
-                if len(frames_for_pwr) == 500:
-                    np.save(savedir+'/OPD_frames_500.npy', np.array(frames_for_pwr))
-                    break
-
-
             print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
             print("SR: " +str(strehl))
             if (i+1) % 500 == 0:
@@ -104,6 +89,7 @@ for r0 in [0.13]:#, 0.0866666667]:
                 SR_std.append(std)
                 rewards.append(accu_reward)
                 accu_reward = 0
+                print(sr)
 
 
         print(f'R0: {r0}, wind speed: {ws}, Mean SR: {SRs[0]}')

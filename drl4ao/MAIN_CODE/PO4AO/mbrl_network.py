@@ -31,7 +31,7 @@ def get_env(args):
     return TorchWrapper(env)
 
 @torch.no_grad()
-def run(env, past_obs, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration, reconstructor): 
+def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration, reconstructor): 
     """Run an entire Episode (based on max-ts = number of frames per Episode).
     :param: env, past_obs, past_act, obs, replay, policy, dynamics, sigma, writer: SummaryWriter, episode,iteration
     :return env.calculate_strehl_AVG(): Average Strehl ration in the Episode, float. 
@@ -41,15 +41,19 @@ def run(env, past_obs, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts,
     :return obs: Last WFS measurement (state) of the Episode, matrix (sized according to system parameters).
     :return rewards: List of all past rewards through the Episode, list of float.
     """
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     dynamics.eval()
     policy.eval()
+
+    policy.to(device)
 
     c_int = 0.6
     c_net = 1 - c_int
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    env.atm.generateNewPhaseScreen(932348 * iteration)
+   
+    env.atm.generateNewPhaseScreen(93234 * iteration)
     env.dm.coefs = 0
 
     env.tel*env.dm*env.wfs
@@ -59,39 +63,41 @@ def run(env, past_obs, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts,
     im = env.reset_soft()
     wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
 
-    int_action = env.gainCL * im.unsqueeze(0)
+    int_action = env.gainCL * im.unsqueeze(0).to(device)
 
     reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
     with torch.no_grad():
         tensor_output = reconstructor(reshaped_input).squeeze()
-        net_action = torch.sinh(tensor_output)  # Now convert to NumPy
+        net_action = torch.sinh(tensor_output)
     
     obs = c_int * int_action - c_net * net_action
 
-
+    obs.to(device)
 
     reward_sum = 0
     rewards = []
     
     if past_obs == None:
-            past_obs = torch.zeros(1, (n_history-1), *obs.shape).squeeze(2)
+            past_obs = torch.zeros(1, (n_history-1), *obs.shape).squeeze(2).to(device)
+            past_act = torch.zeros(1, (n_history-1), *obs.shape).squeeze(2).to(device)
 
     for t in range(max_ts):
 
-        simulated_obs = obs
+        simulated_obs = obs / env.gainCL
 
         if  episode < warmup_ts:
             # action = env.gainCL * obs.unsqueeze(0)
             # action = action + torch.randn_like(action) * sigma
-            action = action + env.sample_noise(sigma)
+            action = obs + env.sample_noise(sigma, use_torch=True).to(device)
         else:            
-            action = policy(simulated_obs.squeeze(0), past_obs)  
+            action = policy(simulated_obs.squeeze(0), torch.cat([past_obs, past_act],dim = 1))  
             action = action.squeeze(0)                                               
         
         im, wfsf, reward,strehl, done, _ = env.step(t,action.squeeze())
 
         # Craft the next observation
-        int_action = env.gainCL * im.unsqueeze(0)
+        int_action = env.gainCL * im.unsqueeze(0).to(device)
+        wfsf = torch.tensor(wfsf).float().unsqueeze(1).to(device)
 
         reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
         with torch.no_grad():
@@ -100,19 +106,22 @@ def run(env, past_obs, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts,
         
         next_obs = c_int * int_action - c_net * net_action
 
+        next_obs.to(device)
 
         # roll telemetry data with new data
-        past_obs = torch.cat([past_obs[:,1:,:,:], obs.unsqueeze(0).unsqueeze(0)], dim = 1) 
-        
+        past_obs = torch.cat([past_obs[:,1:,:,:], obs.unsqueeze(0).to(device)], dim = 1) 
+        past_act = torch.cat([past_act[:,1:,:,:], action.to(torch.float32).unsqueeze(0).to(device)], dim = 1)
+
+
         reward_sum += reward
         rewards.append(reward)
 
-        action_to_save = action.squeeze().to(torch.float32)
+        action_to_save = action.squeeze().to(torch.float32).to(device)
         replay.append(obs, action_to_save, reward, next_obs, done)
 
-        obs = next_obs
+        obs = next_obs.to(device)
     
-    return env.calculate_strehl_AVG(), reward_sum, past_obs, obs, rewards,iteration
+    return env.calculate_strehl_AVG(), reward_sum, past_obs, past_act, obs, rewards,iteration
 
 
 def train_dynamics(n_history,max_ts,batch_size,dynamics: Dynamics, optimizer: optim.Adam, replay: EfficientExperienceReplay, dyn_iters=5,device ='cuda:0'):
@@ -146,7 +155,7 @@ def train_dynamics(n_history,max_ts,batch_size,dynamics: Dynamics, optimizer: op
             state = states_unfolded[:,-1].squeeze(2) 
             action = actions_unfolded[:,-1].squeeze(2)  
 
-            history = states_unfolded[:,:-1].squeeze(2) 
+            history = torch.cat([states_unfolded[:,:-1].squeeze(2), actions_unfolded[:,:-1].squeeze(2)], dim=1) 
 
             pred = bs_model(state, action, history)
 

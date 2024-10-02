@@ -54,10 +54,6 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
 
     obs = env.reset_soft()
 
-    if use_recon:
-        wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
-
-
     reward_sum = 0
     rewards = []
     
@@ -67,26 +63,10 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
     
     for t in range(max_ts):
 
-        int_action = env.gainCL * obs.unsqueeze(0)
-
-        if use_recon:
-            reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
-            with torch.no_grad():
-                tensor_output = reconstructor(reshaped_input).squeeze()
-                numpy_output = torch.sinh(tensor_output)  # Now convert to NumPy
-                action = 0.6 * int_action - (1 - 0.6) * numpy_output
-
-        else:
-            action = int_action
-
-
-        # simulated_obs = obs.unsqueeze(0)
-
-        simulated_obs = action
-
+        simulated_obs = obs.unsqueeze(0)
 
         if  episode < warmup_ts:
-            # action = env.gainCL * obs.unsqueeze(0)
+            action = env.gainCL * obs.unsqueeze(0)
             # action = action + torch.randn_like(action) * sigma
             action = action + env.sample_noise(sigma)
         else:            
