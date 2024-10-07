@@ -1,5 +1,5 @@
 save_all_PSF: False
-savedir: 'redo_wf_vs_int'
+savedir: 'unmod_LE_many'
 experiment_tag: test
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'

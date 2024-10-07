@@ -74,7 +74,7 @@ def load_model(model_path):
 
 data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets/atm_stats'
 
-ds_size = 200000
+ds_size = 300000
 
 
 # %%
@@ -99,13 +99,13 @@ train_indices = indices[:train_size]
 val_indices = indices[train_size:train_size + val_size]
 test_indices = indices[train_size + val_size:]
 
-input_file_path = data_dir_path+'/wfs_frames_CL_200k.npy'
-target_file_path = data_dir_path+'/dm_cmds_CL_200k.npy'
+input_file_path = data_dir_path+'/wfs_frames_unmodulated_300.npy'
+target_file_path = data_dir_path+'/dm_cmds_unmodulated_300.npy'
 
 dm_shape = env.dm.coefs.shape
 wfs_shape=env.wfs.cam.frame.shape
 
-D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=200000)
+D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=300000)
 
 #%%
 wfsf = torch.zeros((3,4,24,24))
@@ -121,7 +121,7 @@ for i in range(3):
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/models/tmp/finetune_CL.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/tmp/unmod.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
@@ -198,7 +198,7 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'CL'
+tag = 'unmod'
 
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')

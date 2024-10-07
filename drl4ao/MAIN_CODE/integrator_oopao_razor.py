@@ -32,7 +32,7 @@ args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
 # args.delay = 1
 
-args.nLoop = 1000
+args.nLoop = 10000
 
 for r0 in [0.13, 0.0866666667]:
     args.r0 = r0
@@ -90,6 +90,8 @@ for r0 in [0.13, 0.0866666667]:
                 rewards.append(accu_reward)
                 accu_reward = 0
                 print(sr)
+
+                
 
 
         print(f'R0: {r0}, wind speed: {ws}, Mean SR: {SRs[0]}')
