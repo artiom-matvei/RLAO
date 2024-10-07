@@ -61,7 +61,7 @@ def initializeParameterFile(args):
     param['MisReg_rotationAngle'] = 0                                               # in [deg]
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WFS PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    param['modulation'            ] = 3                                             # modulation radius in ratio of wavelength over telescope diameter
+    param['modulation'            ] = args.modulation                                             # modulation radius in ratio of wavelength over telescope diameter
     param['n_pix_separation'      ] = 4                                             # separation ratio between the PWFS pupils
     param['psfCentering'          ] = False                                         # centering of the FFT and of the PWFS mask on the 4 central pixels
     param['lightThreshold'        ] = 0.1                                           # light threshold to select the valid pixels

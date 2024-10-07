@@ -10,6 +10,7 @@ fractionnalR0: [0.45,0.1,0.1,0.25,0.1]
 windSpeed: [10,12,11,15,20]
 windDirection: [0,72,144,216,288]
 altitude: [0,1000,5000,10000,12000]
+modulation: 0 
 
 nLoop: 10000
 gainCL: 0.5
