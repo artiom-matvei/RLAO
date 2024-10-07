@@ -30,13 +30,13 @@ from PO4AO.mbrl import get_env
 args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 #%%
 
-args.delay = 1
+# args.delay = 1
 
 args.nLoop = 1000
 
 for r0 in [0.13, 0.0866666667]:
     args.r0 = r0
-    # env = get_env(args)
+    env = get_env(args)
     env.gainCL = 0.9
 
 
