@@ -6,7 +6,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from zernike import RZern
 from scipy.optimize import curve_fit
-import matplotlib.animation as animation, PillowWriter
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -34,6 +33,7 @@ except:
 from gifTools import create_gif
 
 import matplotlib.pyplot as plt
+from matplotlib.animation import PillowWriter
 plt.rcParams['image.cmap'] = 'inferno'
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
