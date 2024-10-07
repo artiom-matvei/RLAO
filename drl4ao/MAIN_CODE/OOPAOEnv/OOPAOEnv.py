@@ -69,6 +69,7 @@ class OOPAO(gym.Env):
         self.leak = 0.99
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.network = None
+        self.net_gain = 0.5
 
 
     def reset(self):

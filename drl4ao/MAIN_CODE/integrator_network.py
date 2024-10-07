@@ -34,11 +34,13 @@ model_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE
 
 args.delay = 1
 
-args.nLoop = 1000
+args.nLoop = 10000
 
 env = get_env(args)
 
 env.gainCL = 0.9
+
+net_gain = 0.5
 
 checkpoint = torch.load(model_dir+'/models/useable/finetune_CL.pt',map_location=device)
 
@@ -52,100 +54,109 @@ reconstructor.to(device)
 reconstructor.eval()
 
 
-
+c_int = 0.8
+c_net = 1. - c_int
 # env.tel.resetOPD()
 # env.tel.computePSF(4)
 
 # psf_model_max = env.tel.PSF.max()
 
 #%%
-for c_int in [1, 0.8, 0.7, 0.6]:
 
-    c_net = 1. - c_int
+for r0 in [0.13, 0.0866666667]:
+    args.r0 = r0
+    env = get_env(args)
 
-    env.atm.generateNewPhaseScreen(17)
+    env.gainCL = 0.9
+    env.net_gain = 0.5
 
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
-    savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
+    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
+        env.atm.windSpeed = ws
+        env.atm.generateNewPhaseScreen(17)
+        env.dm.coefs = 0
+        env.tel*env.dm*env.wfs
 
-    # savedir = '../../logs/can_delete/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
+        savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_r0_{r0:.2f}_ws_{ws[0]}'
+
+        # savedir = '../../logs/can_delete/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
 
 
-    print('Start make env')
-    os.makedirs(savedir, exist_ok=True)
+        print('Start make env')
+        os.makedirs(savedir, exist_ok=True)
 
 
-    LE_PSFs= []
-    SE_PSFs = []
-    SRs = []
-    SR_std = []
-    rewards = []
-    accu_reward = 0
+        LE_PSFs= []
+        SE_PSFs = []
+        SRs = []
+        SR_std = []
+        rewards = []
+        accu_reward = 0
 
-    LE_SR = []
+        LE_SR = []
 
-    use_net = True
-    reset_counter = 0
+        use_net = True
+        reset_counter = 0
 
-    obs = env.reset_soft()
+        obs = env.reset_soft()
 
-    if c_net > 0:
-        wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
-
-    for i in range(args.nLoop):
-        a=time.time()
-
-        reset_counter += 1
-
-        int_action = env.gainCL * obs
-
-        if (c_net > 0)&(use_net):
-            reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
-            with torch.no_grad():
-                tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
-                numpy_output = np.sinh(tensor_output.numpy())  # Now convert to NumPy
-                action = c_int * int_action - c_net * numpy_output
-
-        else:
-            action = int_action
-
-        obs,_, reward,strehl, done, info = env.step(i,action)  
-
-        if c_net>0:
+        if c_net > 0:
             wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
 
-        accu_reward+= reward
+        for i in range(args.nLoop):
+            a=time.time()
 
-        b= time.time()
-        print('Elapsed time: ' + str(b-a) +' s')
+            reset_counter += 1
 
-        # env.tel.computePSF(4)
-        # SE_PSFs.append(env.tel.PSF)
+            int_action = env.gainCL * obs
 
-        # LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
+            if (c_net > 0)&(use_net):
+                reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+                with torch.no_grad():
+                    tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
+                    net_action = net_gain * np.sinh(tensor_output.numpy())  # Now convert to NumPy
+                    action = c_int * int_action - c_net * net_action
+
+            else:
+                action = int_action
+
+            obs,_, reward,strehl, done, info = env.step(i,action)  
+
+            if c_net>0:
+                wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
+
+            accu_reward+= reward
+
+            b= time.time()
+            print('Elapsed time: ' + str(b-a) +' s')
+
+            # env.tel.computePSF(4)
+            # SE_PSFs.append(env.tel.PSF)
+
+            # LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
 
 
-        print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-        print("SR: " +str(strehl))
-        if (i+1) % 100 == 0:
-            sr, std = env.calculate_strehl_AVG()
-            SRs.append(sr)
-            SR_std.append(std)
-            rewards.append(accu_reward)
-            accu_reward = 0
+            print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+            print("SR: " +str(strehl))
+            if (i+1) % 100 == 0:
+                sr, std = env.calculate_strehl_AVG()
+                SRs.append(sr)
+                SR_std.append(std)
+                rewards.append(accu_reward)
+                accu_reward = 0
 
-            print(sr)
+                print(sr)
 
 
 
-    print(rewards)
-    print("Saving Data")
-    torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
-    torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
-    torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
+        print(rewards)
+        print("Saving Data")
+        torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+        torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+        torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
 
-    print("Data Saved")
+        print("Data Saved")
 
 # %%
 plt.style.use('ggplot')

@@ -49,7 +49,7 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
 
     policy.to(device)
 
-    c_int = 0.6
+    c_int = 0.8
     c_net = 1 - c_int
 
    
@@ -68,7 +68,7 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
     reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
     with torch.no_grad():
         tensor_output = reconstructor(reshaped_input).squeeze()
-        net_action = torch.sinh(tensor_output)
+        net_action = env.net_gain * torch.sinh(tensor_output)
     
     obs = c_int * int_action - c_net * net_action
 

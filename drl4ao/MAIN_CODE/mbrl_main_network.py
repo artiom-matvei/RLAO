@@ -47,6 +47,7 @@ for r0 in [0.13, 0.0866666667]:
     env = get_env(args)
 
     env.gainCL = 0.9
+    env.net_gain = 0.5
 
     for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws

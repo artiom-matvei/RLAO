@@ -12,7 +12,7 @@
 
 cd MAIN_CODE
 
-savedir='wf_po4ao'
+savedir='redo_wf_vs_int'
 logpath="../../logs/"$savedir
 mkdir -p $logpath 
 
