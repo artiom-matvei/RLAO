@@ -1,6 +1,6 @@
 save_all_PSF: False
-savedir: 'unmod_LE_many'
-experiment_tag: test
+savedir: 'unmod_LE_delay'
+experiment_tag: linear
 oopao_path: 'AO_OOPAO'
 param_file: 'Conf.parameterFile_oopao_parser'
 

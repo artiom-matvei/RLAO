@@ -40,22 +40,30 @@ args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 
 args.delay = 1
 
+c_int_list = [0.9, 0.3, 0.5, 0.1, 0.1, 0.1]
+c_counter = 0
+
 #%%
 
-for r0 in [0.13, 0.0866666667]:
+for r0 in [0.13, 0.0866666667, 0.05]:
     args.r0 = r0
     env = get_env(args)
 
-    env.gainCL = 0.9
-    env.net_gain = 0.5
+    env.gainCL = 0.95
+    net_gain = 0.52
 
     for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
         env.atm.windSpeed = ws
         env.atm.generateNewPhaseScreen(17)
 
+        # contrib = c_int_list[c_counter]
+        contrib = 1
+        # c_counter += 1
+
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}')
-        savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
+        # savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
+        savedir = '../../logs/'+args.savedir+'/po4ao/'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
 
 
         os.makedirs(savedir, exist_ok=True)
@@ -77,7 +85,7 @@ for r0 in [0.13, 0.0866666667]:
         # Load reconstructor
         model_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon'
 
-        checkpoint = torch.load(model_dir+'/models/useable/finetune_CL.pt',map_location=env.device)
+        checkpoint = torch.load(model_dir+'/models/useable/unmod.pt',map_location=env.device)
         reconstructor = Unet_big(env.xvalid,env.yvalid)
         reconstructor.load_state_dict(checkpoint['model_state_dict'])
         reconstructor.to(env.device)
@@ -114,7 +122,7 @@ for r0 in [0.13, 0.0866666667]:
             
             start = time.time()
             
-            strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration, reconstructor=reconstructor)
+            strehl, reward_sum, past_obs, past_act, obs, rewards,iteration  = run(env, past_obs, past_act, obs,replay, policy, dynamics,args.n_history,args.max_ts,args.warmup_ts, sigma=sigma, writer=writer, episode = i,iteration=iteration, reconstructor=reconstructor, c_int=contrib)
 
             if reward_sum < -46:
                 converged = 1

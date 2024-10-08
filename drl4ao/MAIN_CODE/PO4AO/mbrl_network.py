@@ -31,7 +31,7 @@ def get_env(args):
     return TorchWrapper(env)
 
 @torch.no_grad()
-def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration, reconstructor): 
+def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,warmup_ts, sigma, writer: SummaryWriter, episode,iteration, reconstructor, c_int): 
     """Run an entire Episode (based on max-ts = number of frames per Episode).
     :param: env, past_obs, past_act, obs, replay, policy, dynamics, sigma, writer: SummaryWriter, episode,iteration
     :return env.calculate_strehl_AVG(): Average Strehl ration in the Episode, float. 
@@ -49,7 +49,6 @@ def run(env, past_obs, past_act, obs, replay, policy, dynamics,n_history,max_ts,
 
     policy.to(device)
 
-    c_int = 0.8
     c_net = 1 - c_int
 
    

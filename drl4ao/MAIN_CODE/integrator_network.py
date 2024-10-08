@@ -32,15 +32,18 @@ args = SimpleNamespace(**read_yaml_file('Conf/papyrus_config.yaml'))
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon'
 
-# args.delay = 1
+args.delay = 1
 
-args.nLoop = 1000
+args.nLoop = 10000
 
 env = get_env(args)
 
 env.gainCL = 0.95
 
 net_gain = 0.52
+
+# c_int_list = [0.9, 0.3, 0.5, 0.1, 0.1, 0.1]
+# c_counter = 0
 
 checkpoint = torch.load(model_dir+'/models/useable/unmod.pt',map_location=device)
 
@@ -61,18 +64,20 @@ env.tel.computePSF(4)
 psf_model_max = env.tel.PSF.max()
 
 #%%
-for c_int in np.arange(0.1, 1, 0.2):
-    # c_int = 0.
-    c_net = 1. - c_int
 
-    for r0 in [0.13, 0.0866666667, 0.05]:
-        args.r0 = r0
-        env = get_env(args)
-        env.gainCL = 0.95
-        env.net_gain = 0.52
+for r0 in [0.05]:#[0.13, 0.0866666667, 0.05]:
+    args.r0 = r0
+    env = get_env(args)
+    env.gainCL = 0.95
+    env.net_gain = 0.52
 
-        for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
-            env.atm.windSpeed = ws
+    for ws in [[10,12,11,15,20], [20,24,22,30,40]]:
+        env.atm.windSpeed = ws
+
+        for c_int in [1., 0.1, 0]:
+            c_net = 1. - c_int
+
+            
 
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
@@ -85,83 +90,82 @@ for c_int in np.arange(0.1, 1, 0.2):
             print('Start make env')
             os.makedirs(savedir, exist_ok=True)
 
+            env.atm.generateNewPhaseScreen(17)
+            env.dm.coefs = 0
+            env.tel*env.dm*env.wfs
 
-            for j in range(1,11):
-                env.atm.generateNewPhaseScreen(23857*j)
-                env.dm.coefs = 0
-                env.tel*env.dm*env.wfs
 
+            LE_PSFs= []
+            SE_PSFs = []
+            SRs = []
+            SR_std = []
+            rewards = []
+            accu_reward = 0
+
+            LE_SR = []
+
+            use_net = True
+            reset_counter = 0
+
+            obs = env.reset_soft()
+
+            if c_net > 0:
+                wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
+
+            for i in range(args.nLoop):
+                a=time.time()
+
+                reset_counter += 1
+
+                int_action = env.gainCL * obs
+
+                if (c_net > 0)&(use_net):
+                    reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
+                    with torch.no_grad():
+                        tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
+                        net_action = net_gain * np.sinh(tensor_output.numpy())  # Now convert to NumPy
+                        action = c_int * int_action - c_net * net_action
+
+                else:
+                    action = int_action
+
+                obs,_, reward,strehl, done, info = env.step(i,action)  
+
+                # env.tel.computePSF(4)
+                # SE_PSFs.append(env.tel.PSF[175:-175, 175:-175])
+                # LE_PSFs.append(np.mean(SE_PSFs, axis=0))
+
+                # LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
                 
-
-                LE_PSFs= []
-                SE_PSFs = []
-                SRs = []
-                SR_std = []
-                rewards = []
-                accu_reward = 0
-
-                LE_SR = []
-
-                use_net = True
-                reset_counter = 0
-
-                obs = env.reset_soft()
-
-                if c_net > 0:
+                
+                if c_net>0:
                     wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
 
-                for i in range(args.nLoop):
-                    a=time.time()
+                accu_reward+= reward
 
-                    reset_counter += 1
+                b= time.time()
+                print('Elapsed time: ' + str(b-a) +' s')
 
-                    int_action = env.gainCL * obs
+                print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
+                print("SR: " +str(strehl))
+                if (i+1) % 500 == 0:
+                    sr, std = env.calculate_strehl_AVG()
+                    SRs.append(sr)
+                    SR_std.append(std)
+                    rewards.append(accu_reward)
+                    accu_reward = 0
 
-                    if (c_net > 0)&(use_net):
-                        reshaped_input = wfsf.view(-1, 2, 24, 2, 24).permute(0, 1, 3,2, 4).contiguous().view(-1, 4, 24, 24)
-                        with torch.no_grad():
-                            tensor_output = reconstructor(reshaped_input).squeeze().detach().cpu()
-                            net_action = net_gain * np.sinh(tensor_output.numpy())  # Now convert to NumPy
-                            action = c_int * int_action - c_net * net_action
+                    print(sr)
 
-                    else:
-                        action = int_action
+            print(rewards)
+            print("Saving Data")
+            torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
+            torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
+            torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
+            # torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{j}.pt"))
+            print("Data Saved")
 
-                    obs,_, reward,strehl, done, info = env.step(i,action)  
-
-                    env.tel.computePSF(4)
-                    SE_PSFs.append(env.tel.PSF[175:-175, 175:-175])
-                    LE_PSFs.append(np.mean(SE_PSFs, axis=0))
-
-                    LE_SR.append(np.max(np.mean(SE_PSFs, axis=0))/psf_model_max)
-                    
-                    
-                    if c_net>0:
-                        wfsf = torch.tensor(env.wfs.cam.frame.copy()).float().unsqueeze(1).to(device)
-
-                    accu_reward+= reward
-
-                    b= time.time()
-                    print('Elapsed time: ' + str(b-a) +' s')
-
-                    print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-                    print("SR: " +str(strehl))
-                    if (i+1) % 500 == 0:
-                        sr, std = env.calculate_strehl_AVG()
-                        SRs.append(sr)
-                        SR_std.append(std)
-                        rewards.append(accu_reward)
-                        accu_reward = 0
-
-                        print(sr)
-
-                print(rewards)
-                print("Saving Data")
-                torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
-                torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
-                torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
-                torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{j}.pt"))
-                print("Data Saved")
+        # c_counter += 1
 
 # %%
 plt.style.use('ggplot')
@@ -240,7 +244,7 @@ psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len
 
 # plt.plot(y_mean1, label='Network')
 # plt.fill_between(np.arange(1000), y_min1, y_max1, alpha=0.3 )
-# # plt.plot(sr2, label=f'Integrator')
+
 # y_mean2 = np.mean(sr2, axis=0)
 # y_min2 = y_mean2 - np.std(sr2, axis=0)
 # y_max2 = y_mean2 + np.std(sr2, axis=0)
@@ -253,4 +257,29 @@ psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len
 # plt.xlabel('Frame')
 # plt.ylabel('SR')
 # plt.legend()
+# plt.show()
+
+
+
+
+
+# plt.style.use('ggplot')
+
+# r0, ws = 0.09, 20
+
+# for i in [0, 1, 0.1]:
+
+#     lsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/integrator/linear_20s_r0_{r0}_ws_{ws}_int_{i:.2f}/sr2plot.pt')
+#     plt.plot(np.arange(1,21), lsr2, label=f'Network {(1 - i)*100:.0f}%')
+
+# po4ao_unet = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/po4ao/test_20sr0_{r0}_ws_[20, 24, 22, 30, 40]/sr2plot.pt')
+# plt.plot(np.arange(1,21), po4ao_unet, label=f'U-Net + PO4AO')
+
+# po4ao_lin = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/po4ao/linear_20sr0_{r0}_ws_[20, 24, 22, 30, 40]/sr2plot.pt')
+# plt.plot(np.arange(1,21), po4ao_lin, label=f'PO4AO')
+# plt.legend()
+# plt.title(f'Mean Strehl -- r0: {r0}, ws:{ws}')
+# plt.ylabel('SR')
+# plt.xlabel('Episode')
+# # plt.xlim(0.4,0.75)
 # plt.show()
