@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=40G                        # memory per node
 #SBATCH --time=00-02:59         # time (DD-HH:MM)
-#SBATCH -e ../../logs/unmod_po4ao/err_po4ao.txt
+#SBATCH -e ../../logs/unmod_po4ao_long/err_po4ao.txt
 #SBATCH --account=def-lplevass
 #SBATCH --job-name=wf_unmod_po4ao
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -12,7 +12,7 @@
 
 cd MAIN_CODE
 
-savedir='unmod_po4ao'
+savedir='unmod_po4ao_long'
 logpath="../../logs/"$savedir
 mkdir -p $logpath 
 
