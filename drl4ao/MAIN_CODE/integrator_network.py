@@ -61,7 +61,7 @@ env.tel.computePSF(4)
 psf_model_max = env.tel.PSF.max()
 
 #%%
-for c_int in [0., 1,]:
+for c_int in np.arange(0.1, 1, 0.2):
     # c_int = 0.
     c_net = 1. - c_int
 
@@ -76,7 +76,7 @@ for c_int in [0., 1,]:
 
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             # savedir = '../../logs/'+args.savedir+'/integrator/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
-            savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_r0_{r0:.2f}_ws_{ws[0]}_int_{c_int}'
+            savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_r0_{r0:.2f}_ws_{ws[0]}_int_{c_int:.2f}'
             # savedir = '../../logs/'+args.savedir+'/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_net_gain_{net_gain}'
 
             # savedir = '../../logs/can_delete/integrator/'+args.experiment_tag+'_'+str(int(args.nLoop/args.frames_per_sec))+'s'f'_int_percent_{c_int}'
@@ -86,8 +86,8 @@ for c_int in [0., 1,]:
             os.makedirs(savedir, exist_ok=True)
 
 
-            for i in range(1,11):
-                env.atm.generateNewPhaseScreen(23857*i)
+            for j in range(1,11):
+                env.atm.generateNewPhaseScreen(23857*j)
                 env.dm.coefs = 0
                 env.tel*env.dm*env.wfs
 
@@ -160,7 +160,7 @@ for c_int in [0., 1,]:
                 torch.save(rewards, os.path.join(savedir, "rewards2plot.pt"))
                 torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
                 torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
-                torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{i}.pt"))
+                torch.save(LE_SR, os.path.join(savedir, f"LE_SR_{j}.pt"))
                 print("Data Saved")
 
 # %%
@@ -224,4 +224,33 @@ mesh = np.linspace(0, max_radius, max_radius*2)
 
 psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len(mesh)-1)]
 
-# %%
+# #TO PLOT THE FILLED LE CURVES
+# sr1 = []
+# sr2 = []
+
+# r0 = 0.13
+# ws = 20
+
+# for i in range(1,11):
+#     sr1.append(torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_many/integrator/test_2s_r0_{r0}_ws_{ws}_int_0.0/LE_SR_{i}.pt'))
+#     sr2.append(torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_many/integrator/test_2s_r0_{r0}_ws_{ws}_int_1/LE_SR_{i}.pt'))
+# y_mean1 = np.mean(sr1, axis=0)
+# y_min1 = y_mean1 - np.std(sr1, axis=0)
+# y_max1 = y_mean1 + np.std(sr1, axis=0)
+
+# plt.plot(y_mean1, label='Network')
+# plt.fill_between(np.arange(1000), y_min1, y_max1, alpha=0.3 )
+# # plt.plot(sr2, label=f'Integrator')
+# y_mean2 = np.mean(sr2, axis=0)
+# y_min2 = y_mean2 - np.std(sr2, axis=0)
+# y_max2 = y_mean2 + np.std(sr2, axis=0)
+
+# plt.plot(y_mean2, label='Integrator')
+# plt.fill_between(np.arange(1000), y_min2, y_max2, alpha=0.3 )
+
+# plt.title(f'LE SR -- r0: {r0}, ws: {ws}')
+
+# plt.xlabel('Frame')
+# plt.ylabel('SR')
+# plt.legend()
+# plt.show()
