@@ -82,7 +82,7 @@ for j in range(size):
     
     env.tel.resetOPD()
 
-    env.atm.generateNewPhaseScreen(82003 * (j + 1))
+    env.atm.generateNewPhaseScreen(np.random.randint(0, 4294967296 - 2))
     opd = env.tel.OPD.copy()
 
 
@@ -98,7 +98,10 @@ for j in range(size):
 
     modal_coefs = np.matmul(OPD2M, opd[xpupil, ypupil])
 
-    env.tel.OPD = M2OPD[:, :50]@modal_coefs[:50]
+    opd_fit = np.zeros_like(opd)
+    opd_fit[xpupil, ypupil] = M2OPD[:, :50]@modal_coefs[:50]
+
+    env.tel.OPD = opd_fit
 
     env.tel*env.wfs
 
