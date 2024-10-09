@@ -589,7 +589,7 @@ def rmse_reconstruct(env, reconstructor, size=100, gain=0.2):
 
     return rmse_network, rmse_integrator
 # %%
-def make_M2OPD(env):
+def make_M2OPD(env, n=25, m=300):
 
     xpupil, ypupil = np.where(env.tel.pupil == 1)
     mask = np.zeros((120,120))
@@ -610,7 +610,7 @@ def make_M2OPD(env):
         return low_res
 
 
-    cart = RZern(25)
+    cart = RZern(n)
     L, K = mask.shape
     res = 5
     ddx = np.linspace(-1.0, 1.0, K*res)
@@ -620,8 +620,8 @@ def make_M2OPD(env):
 
     c = np.zeros(cart.nk)
 
-    M2OPD = np.empty((np.count_nonzero(mask), 300))
-    for i in range(300):
+    M2OPD = np.empty((np.count_nonzero(mask), m))
+    for i in range(m):
         c *= 0.0
         c[i+1] = 1.0
         phi = downsample(mask, cart.eval_grid(c, matrix=True), res)
