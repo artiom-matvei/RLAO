@@ -1,6 +1,5 @@
 """
-OOPAO module for the integrator
-@author: Raissa Camelo (LAM) git: @srtacamelo
+@author: Parker Levesque
 """
 
 #%%
