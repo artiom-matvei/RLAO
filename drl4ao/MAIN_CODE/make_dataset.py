@@ -78,8 +78,9 @@ start = time.time()
 
 for j in range(size):
 
-    # choose_spectrum = np.random.choice([0,1,2])    
-
+    # choose_spectrum = np.random.choice([0,1,2])  
+    
+    env.tel.resetOPD()
 
     env.atm.generateNewPhaseScreen(82003 * (j + 1))
     opd = env.tel.OPD.copy()
