@@ -288,21 +288,28 @@ psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len
 
 # plt.style.use('ggplot')
 
-# r0, ws = 0.09, 20
 
-# # for i in [0, 1, 0.9]:
+# for r0 in [0.13, 0.09, 0.05]:
+#     for ws in [10, 20]:
+#         po4ao_unet = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_100sr0_{r0}_ws_{ws}_c_int_0/sr2plot.pt')
+#         plt.plot(np.arange(1,101), po4ao_unet, label=f'U-Net + PO4AO')
 
-# #     lsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/integrator/linear_20s_r0_{r0}_ws_{ws}_int_{i:.2f}/sr2plot.pt')
-# #     plt.axhline(np.mean(lsr2), label=f'Network {(1 - i)*100:.0f}%')
+#         po4ao_lin = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_100sr0_{r0}_ws_{ws}_c_int_1/sr2plot.pt')
+#         plt.plot(np.arange(1,101), po4ao_lin, label=f'PO4AO')
+  
 
-# po4ao_unet = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_60sr0_{r0}_ws_[20, 24, 22, 30, 40]_c_int_0.1/sr2plot.pt')
-# plt.plot(np.arange(1,61), po4ao_unet, label=f'U-Net + PO4AO')
 
-# po4ao_lin = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_60sr0_{r0}_ws_[20, 24, 22, 30, 40]_c_int_1/sr2plot.pt')
-# plt.plot(np.arange(1,61), po4ao_lin, label=f'PO4AO')
-# plt.legend()
-# plt.title(f'Mean Strehl -- r0: {r0}, ws:{ws}')
-# plt.ylabel('SR')
-# plt.xlabel('Episode')
-# # plt.xlim(0.4,0.75)
-# plt.show()
+#         integrator = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/integrator/linear_20s_r0_{r0}_ws_{ws}_int_1.00/sr2plot.pt')
+#         plt.axhline(np.mean(integrator), label=f'Mean Integrator', c='k')
+#         
+        #   d = 1.52 / 21
+        #   r0_500nm_to_790nm = 1.73
+        #   fit_err = 0.275 * (d / (r0_500nm_to_790nm * r0))**(5/3)
+
+        #   plt.axhline(np.exp(-fit_err), label='Fitting error', c='purple')
+
+#         plt.legend()
+#         plt.title(f'Mean Strehl -- r0: {r0}, ws:{ws}')
+#         plt.ylabel('SR')
+#         plt.xlabel('Episode')
+#         plt.show()

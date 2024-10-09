@@ -32,10 +32,8 @@ try:
 except:
     args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
 
-from gifTools import create_gif
 
 import matplotlib.pyplot as plt
-from matplotlib.animation import PillowWriter
 plt.rcParams['image.cmap'] = 'inferno'
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -48,24 +46,31 @@ env = get_env(args)
 
 M2OPD = make_M2OPD(env)
 
+OPD2M = np.linalg.pinv(M2OPD)
+xpupil, ypupil = np.where(env.tel.pupil == 1)
+
 path = '/home/parker09/projects/def-lplevass/parker09/RLAO/logs/can_delete/integrator/20240926-093309_test_40s_r0_0.13_ws_[10, 12, 11, 15, 20]_gain_0.9/OPD_frames_500.npy'
 
-pwr_OL, fit_OL = zernike_dist(env, M2OPD)
+pwr_OL, fit_OL = zernike_dist(env, M2OPD, full_fit=True)
 
-pwr_CL, fit_CL = zernike_dist(env, M2OPD, path)
+# pwr_CL, fit_CL = zernike_dist(env, M2OPD, path)
 
-mid = np.logspace(np.log10(fit_CL), np.log10(fit_OL), 3)
+# mid = np.logspace(np.log10(fit_CL), np.log10(fit_OL), 3)
 # %%
-tag = 'unmodulated_300'
-size = 300000
+tag = 'diff'
+size = 400000
 
-savedir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datasets/atm_stats'
+savedir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets'
 
-dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
-                                            shape=(size, *env.dm.coefs.shape))
-wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
+# dm_commands = np.memmap(savedir+f'/dm_cmds_{tag}.npy', dtype='float32', mode='w+', \
+#                                             shape=(size, *env.dm.coefs.shape))
+# wfs_frames = np.memmap(savedir+f'/wfs_frames_{tag}.npy', dtype='float32', mode='w+', \
+#                                             shape=(size, *env.wfs.cam.frame.shape))
+wfs_LO = np.memmap(savedir+f'/wfs_LO_{tag}.npy', dtype='float32', mode='w+', \
+                                              shape=(size, *env.wfs.cam.frame.shape))
+
+wfs_HO = np.memmap(savedir+f'/wfs_HO_{tag}.npy', dtype='float32', mode='w+', \
                                             shape=(size, *env.wfs.cam.frame.shape))
-
 
 frame = 0
 
@@ -73,22 +78,30 @@ start = time.time()
 
 for j in range(size):
 
+    # choose_spectrum = np.random.choice([0,1,2])    
 
-    choose_spectrum = np.random.choice([0,1,2])    
 
-    env.tel.resetOPD()
+    env.atm.generateNewPhaseScreen(82003 * (j + 1))
+    opd = env.tel.OPD.copy()
 
-    coefficients = np.random.normal(0, np.sqrt(mid[choose_spectrum]))
 
-    command = env.M2C_CL@coefficients
+    # command = env.M2C_CL@coefficients
 
-    env.dm.coefs = command.copy()
+    # env.dm.coefs = command.copy()
 
-    env.tel*env.dm
+    # env.tel*env.dm
     env.tel*env.wfs
 
-    wfs_frames[frame] = np.float32(env.wfs.cam.frame.copy())
-    dm_commands[frame] = np.float32(command.copy())
+    wfs_HO[frame] = np.float32(env.wfs.cam.frame.copy())
+    # dm_commands[frame] = np.float32(command.copy())
+
+    modal_coefs = np.matmul(OPD2M, opd[xpupil, ypupil])
+
+    env.tel.OPD = M2OPD[:, :50]@modal_coefs[:50]
+
+    env.tel*env.wfs
+
+    wfs_LO[frame] = np.float32(env.wfs.cam.frame.copy())
 
     frame += 1
 
@@ -101,6 +114,8 @@ for j in range(size):
 
         start = time.time()
 
-dm_commands.flush()
-wfs_frames.flush()
+# dm_commands.flush()
+# wfs_frames.flush()
+wfs_HO.flush()
+wfs_LO.flush()
 
