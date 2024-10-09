@@ -247,7 +247,7 @@ def basis_distribution(env, path=None):
     return np.mean(np.square(modal_coefs), axis=0)
 
 
-def zernike_dist(env, M2OPD, path=None):
+def zernike_dist(env, M2OPD, path=None, full_fit=False):
     size = 500
     xpupil, ypupil = np.where(env.tel.pupil == 1)
 
@@ -264,7 +264,7 @@ def zernike_dist(env, M2OPD, path=None):
     for i in range(size):
         if not path:
             env.tel.resetOPD()
-            env.atm.generateNewPhaseScreen(21234 * i)
+            env.atm.generateNewPhaseScreen(212354 * i)
             opd = env.tel.OPD.copy()
         else:
             opd = data[i]
@@ -277,8 +277,14 @@ def zernike_dist(env, M2OPD, path=None):
         return a * x + b
 
     # Sample data: x and y
-    x_data = np.log(np.arange(1,51))
-    y_data = np.log(pwr[:50])
+    if full_fit:
+        x_data = np.log(np.arange(1,len(pwr) + 1))
+        y_data = np.log(pwr)
+
+
+    else:
+        x_data = np.log(np.arange(1,51))
+        y_data = np.log(pwr[:50])
 
     # Perform curve fitting
     params, covariance = curve_fit(linear_function, x_data, y_data)
