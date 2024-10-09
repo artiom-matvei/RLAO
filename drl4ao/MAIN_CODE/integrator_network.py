@@ -283,3 +283,26 @@ psf_r = [np.mean(env.tel.PSF[(mesh[i] <= r)&(r < mesh[i+1])]) for i in range(len
 # plt.xlabel('Episode')
 # # plt.xlim(0.4,0.75)
 # plt.show()
+
+
+
+# plt.style.use('ggplot')
+
+# r0, ws = 0.09, 20
+
+# # for i in [0, 1, 0.9]:
+
+# #     lsr2 = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_LE_delay/integrator/linear_20s_r0_{r0}_ws_{ws}_int_{i:.2f}/sr2plot.pt')
+# #     plt.axhline(np.mean(lsr2), label=f'Network {(1 - i)*100:.0f}%')
+
+# po4ao_unet = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_60sr0_{r0}_ws_[20, 24, 22, 30, 40]_c_int_0.1/sr2plot.pt')
+# plt.plot(np.arange(1,61), po4ao_unet, label=f'U-Net + PO4AO')
+
+# po4ao_lin = torch.load(f'/home/parker09/projects/def-lplevass/parker09/RLAO/logs/unmod_po4ao_long/po4ao/test_60sr0_{r0}_ws_[20, 24, 22, 30, 40]_c_int_1/sr2plot.pt')
+# plt.plot(np.arange(1,61), po4ao_lin, label=f'PO4AO')
+# plt.legend()
+# plt.title(f'Mean Strehl -- r0: {r0}, ws:{ws}')
+# plt.ylabel('SR')
+# plt.xlabel('Episode')
+# # plt.xlim(0.4,0.75)
+# plt.show()

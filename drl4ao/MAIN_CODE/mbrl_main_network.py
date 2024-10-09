@@ -64,7 +64,7 @@ for r0 in [0.13, 0.0866666667, 0.05]:
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             writer = SummaryWriter('../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}')
             # savedir = '../../logs/'+args.savedir+'/po4ao/'+f'{timestamp}'+'_'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
-            savedir = '../../logs/'+args.savedir+'/po4ao/'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0}_ws_{ws}'
+            savedir = '../../logs/'+args.savedir+'/po4ao/'+args.experiment_tag+'_'+str(args.iters)+'s'+f'r0_{r0:.2f}_ws_{ws[0]}_c_int_{np.floor(c_int):.0f}'
 
 
             os.makedirs(savedir, exist_ok=True)
