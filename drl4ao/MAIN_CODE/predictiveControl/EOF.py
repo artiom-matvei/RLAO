@@ -136,7 +136,7 @@ gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
 ax1 = plt.subplot(gs[0])
 custom_colors = []
 for mode in range(num_modes):
-    bins = np.arange(-7e-9, 8e-9, 1e-9)
+    bins = np.arange(-7e-9, 8e-9, 5e-10)
     counts, bins = np.histogram(pred[:-delay,mode] - modes[n + delay - 1:, mode], bins=bins)
     # Plot the outline using plt.step()
     color = cmap(1 - (mode / (num_modes)))

@@ -2,6 +2,8 @@ logs/
 docs/
 README_old.md
 
+saved_filters/
+
 
 #Saved torch data
 *.pt
