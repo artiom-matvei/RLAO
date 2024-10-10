@@ -10,6 +10,7 @@ import time
 import numpy as np
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
+plt.syle.use('ggplot')
 from PO4AO.mbrl import get_env
 from Plots.AO_plots import make_M2OPD
 args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
@@ -42,6 +43,8 @@ M2OPD = make_M2OPD(env, n=4, m=m) # Make the M2OPD matrix
 
 OPD2M = np.linalg.pinv(M2OPD)
 xpupil, ypupil = np.where(env.tel.pupil == 1)
+
+#%%
 
 print('Starting dataset generation')
 
@@ -97,8 +100,8 @@ for i in range(m):
 
 
 # %%
-F = np.load('/Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/predictiveControl/saved_filters/F_1k_10h_10m_1d.npy')
-delay = 1
+F = np.load('/Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/predictiveControl/saved_filters/F_5k_10h_10m_3d.npy')
+delay = 3
 
 time_len = 100
 num_modes = 10
