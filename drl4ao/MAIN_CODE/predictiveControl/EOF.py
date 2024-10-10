@@ -32,7 +32,7 @@ env = get_env(args)
 m = 10        # Number of modes
 n = 10       # Number of time steps
 l = 1000     # Number of samples
-delay = 1    # Delay measurement and prediction
+delay = 2    # Delay measurement and prediction
 
 D = np.zeros((m*n, l))        # Initialize the dataset
 
@@ -97,13 +97,16 @@ for i in range(m):
 
 
 # %%
+F = np.load('/Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/predictiveControl/saved_filters/F_1k_10h_10m_1d.npy')
+delay = 1
+
 time_len = 100
 num_modes = 10
 modes = np.zeros((num_modes))
 pred = np.zeros((time_len - n + 1, 10))
 
 env.tel.resetOPD()
-env.atm.generateNewPhaseScreen(529843759)
+env.atm.generateNewPhaseScreen(52843759)
 for i in range(time_len):
     modes = np.vstack([modes, np.matmul(OPD2M, env.tel.OPD.copy()[xpupil, ypupil])])
     env.atm.update()
@@ -152,6 +155,7 @@ ax2 = plt.subplot(gs[1])  # Second subplot in the grid (smaller)
 ax2.scatter(np.arange(1, num_modes + 1), np.std(pred[:-delay] - modes[n + delay - 1:], axis=0)[:num_modes] , color=custom_colors, s=70, alpha=0.8)
 ax2.set_title('Standard Deviation of Residuals per Mode')
 ax2.set_xlabel('Mode Number')
+ax2.set_ylim(0, 3.3e-9)
 
 # plt.title('Residual values from prediction')
 ax1.legend()
