@@ -4,19 +4,20 @@ import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from ML_stuff.dataset_tools import read_yaml_file 
 import time
 import numpy as np
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
-plt.syle.use('ggplot')
+plt.style.use('ggplot')
 from PO4AO.mbrl import get_env
-from Plots.AO_plots import make_M2OPD
-args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
+# from Plots.AO_plots import make_M2OPD
+args = SimpleNamespace(**read_yaml_file('../../Conf/papyrus_config.yaml'))
 
 #%%
-
+args.modulation = 3
 # Make the environment
 env = get_env(args)
 
@@ -33,16 +34,11 @@ env = get_env(args)
 m = 10        # Number of modes
 n = 10       # Number of time steps
 l = 1000     # Number of samples
-delay = 2    # Delay measurement and prediction
+delay = 1   # Delay measurement and prediction
 
 D = np.zeros((m*n, l))        # Initialize the dataset
 
 P = np.zeros((m, l))          # Initialize prediction matrix
-
-M2OPD = make_M2OPD(env, n=4, m=m) # Make the M2OPD matrix
-
-OPD2M = np.linalg.pinv(M2OPD)
-xpupil, ypupil = np.where(env.tel.pupil == 1)
 
 #%%
 
@@ -53,15 +49,18 @@ for i in range(l):
     env.atm.generateNewPhaseScreen(np.random.randint(0, 2**32 - 2))
     for j in range(n):
         env.atm.update()
-        coefs = np.matmul(OPD2M, env.tel.OPD.copy()[xpupil, ypupil])
+        env.tel*env.wfs
+
+        coefs = np.matmul(env.modal_CM, env.wfs.signal)
 
         for k in range(m):
             D[j + k*n, i] = coefs[k]
 
     for k in range(delay):
         env.atm.update()
+        env.tel*env.wfs
     
-    coefs = np.matmul(OPD2M, env.tel.OPD.copy()[xpupil, ypupil])
+    coefs = np.matmul(env.modal_CM, env.wfs.signal)
 
     for k in range(m):
         P[k, i] = coefs[k]

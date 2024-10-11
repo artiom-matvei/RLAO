@@ -4,6 +4,7 @@ import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from ML_stuff.dataset_tools import read_yaml_file 
 import time
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 from PO4AO.mbrl import get_env
 from Plots.AO_plots import make_M2OPD
-args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
+args = SimpleNamespace(**read_yaml_file('../../Conf/papyrus_config.yaml'))
 
 #%%
 
@@ -32,6 +33,8 @@ M2OPD = make_M2OPD(env, n=4, m=m) # Make the M2OPD matrix
 
 OPD2M = np.linalg.pinv(M2OPD)
 xpupil, ypupil = np.where(env.tel.pupil == 1)
+
+
 
 #%%
 
@@ -88,8 +91,8 @@ ax2 = plt.subplot(gs[1])  # Second subplot in the grid (smaller)
 ax2.scatter(np.arange(1, num_modes + 1), np.std(pred[:-delay] - modes[n + delay - 1 :], axis=0)[:num_modes] , color=custom_colors, s=70, alpha=0.8)
 ax2.set_title('Standard Deviation of Residuals per Mode')
 ax2.set_xlabel('Mode Number')
-ax2.set_ylim(0, 3.3e-8)
-
+ax2.set_ylim(1e-10, 5e-8)
+ax2.set_yscale('log')
 # plt.title('Residual values from prediction')
 ax1.legend()
 plt.show()

@@ -4,16 +4,16 @@ import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from ML_stuff.dataset_tools import read_yaml_file 
 import time
 import numpy as np
 from types import SimpleNamespace
 import matplotlib.pyplot as plt
-plt.syle.use('ggplot')
+plt.style.use('ggplot')
 from PO4AO.mbrl import get_env
 from Plots.AO_plots import make_M2OPD
-args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
+args = SimpleNamespace(**read_yaml_file('../../Conf/papyrus_config.yaml'))
 
 #%%
 
@@ -33,7 +33,7 @@ env = get_env(args)
 m = 10        # Number of modes
 n = 10       # Number of time steps
 l = 1000     # Number of samples
-delay = 2    # Delay measurement and prediction
+delay = 1    # Delay measurement and prediction
 
 D = np.zeros((m*n, l))        # Initialize the dataset
 
@@ -56,6 +56,7 @@ for i in range(l):
         coefs = np.matmul(OPD2M, env.tel.OPD.copy()[xpupil, ypupil])
 
         for k in range(m):
+            # in the k-th n block, at time j, we store the k-th mode
             D[j + k*n, i] = coefs[k]
 
     for k in range(delay):
@@ -119,6 +120,8 @@ for i in range(time_len):
     if (i+1) >= n:
         obs = np.zeros(n * num_modes)
         for k in range(num_modes):
+            # in the k-th n block, we store the k-th mode's last n measurements
+            # going from oldest to newest
             obs[k * n: k* n + n] = modes[-n:, k]
 
         pred[i - (n-1)] = F@ obs
@@ -158,8 +161,8 @@ ax2 = plt.subplot(gs[1])  # Second subplot in the grid (smaller)
 ax2.scatter(np.arange(1, num_modes + 1), np.std(pred[:-delay] - modes[n + delay - 1:], axis=0)[:num_modes] , color=custom_colors, s=70, alpha=0.8)
 ax2.set_title('Standard Deviation of Residuals per Mode')
 ax2.set_xlabel('Mode Number')
-ax2.set_ylim(0, 3.3e-9)
-
+ax2.set_ylim(1e-10, 5e-8)
+ax2.set_yscale('log')
 # plt.title('Residual values from prediction')
 ax1.legend()
 plt.show()

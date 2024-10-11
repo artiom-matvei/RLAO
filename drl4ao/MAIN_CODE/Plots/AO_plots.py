@@ -26,7 +26,7 @@ from ML_stuff.models import Reconstructor, Reconstructor_2, Unet_big
 #For papyrus sim
 from PO4AO.mbrl import get_env
 try:
-    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
+    args = SimpleNamespace(**read_yaml_file(os.path.dirname(__file__)+'/../Conf/papyrus_config.yaml'))
 except:
     args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
 

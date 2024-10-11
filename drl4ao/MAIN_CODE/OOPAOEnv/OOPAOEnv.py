@@ -379,6 +379,7 @@ class OOPAO(gym.Env):
         self.wfs.cam.photonNoise     = True
         self.display                 = True
         self.reconstructor = M2C_CL@calib_CL.M
+        self.modal_CM = calib_CL.M
         self.F = M2C_CL @ np.linalg.pinv(M2C_CL)
 
         self.M2C_CL = M2C_CL
