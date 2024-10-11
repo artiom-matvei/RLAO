@@ -16,7 +16,7 @@ wfs_shape = (48, 48)
 
 dataset = DiffusionDataset(HO_file_path, LO_file_path, wfs_shape, device, size=400000, use_mmap=True)
 
-net = NCSNpp(channels=4, nf=64, ch_mult=(2, 2, 2), conditions=("input_tensor",), condition_channels=(4,))
+net = NCSNpp(channels=4, nf=64, ch_mult=(2, 2, 2), condition=("input",), condition_input_channels=4)
 sbm = ScoreModel(net, sigma_min=1e-3, sigma_max=1100)
 
 # hi, lo = dataset.__getitem__(19204)
@@ -32,7 +32,7 @@ sbm = ScoreModel(net, sigma_min=1e-3, sigma_max=1100)
 # plt.show()
 
 # %%
-checkpoint_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/checkpoints'
+checkpoint_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/checkpoints2'
 
 sbm.fit(dataset, learning_rate=1e-4, epochs=100000, batch_size=16,\
         checkpoints=10, checkpoints_directory=checkpoint_dir,\
