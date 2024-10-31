@@ -1,5 +1,21 @@
-import numpy as np
+#%%
+import os,sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from ML_stuff.dataset_tools import read_yaml_file
+import time
+import numpy as np
+from types import SimpleNamespace
+import matplotlib.pyplot as plt
+from PO4AO.mbrl import get_env
+import torch
+
+args = SimpleNamespace(**read_yaml_file('../../Conf/papyrus_config.yaml'))
+
+
+#%%
 class ARPredictiveModel:
     def __init__(self, N, M, gamma=0.96, lam=1e-3):
         # N: Number of past WFS measurements
@@ -10,14 +26,20 @@ class ARPredictiveModel:
         self.M = M  # future horizon
         self.gamma = gamma  # forgetting factor
         self.lam = lam  # regularization parameter
+
+        self.y_past = np.zeros(N)  # past WFS measurements
+        self.y_future = np.zeros(M)
+        self.u_past = np.zeros(N)  # past DM commands
+        self.u_future = np.zeros(M)  # future DM commands
         
         # Initialize AR coefficients A, B, and C (random initialization for demo)
-        self.A = np.random.randn(M, N)  # Correlates past WFS measurements to future
-        self.B = np.random.randn(M, N)  # Correlates past DM commands to future WFS
-        self.C = np.random.randn(M, M)  # Correlates future DM commands to future WFS
+        self.A = np.zeros((M, N))  # Correlates past WFS measurements to future
+        self.B = np.zeros((M, N))  # Correlates past DM commands to future WFS
+        self.C = np.zeros((M, M))  # Correlates future DM commands to future WFS
         
+        self.Theta = np.concatenate([self.A, self.B, self.C], axis=1)
         # Initialize the inverse covariance matrix P
-        self.P = np.eye(N + M + M)  # Identity matrix with size according to past + future
+        self.P = np.eye(2*N + M) * 1e9 # Identity matrix with size according to past + future
 
     def predict_next_measurement(self, y_past, u_past, u_future):
         """ Predict the next WFS measurement using the AR model """
@@ -29,82 +51,116 @@ class ARPredictiveModel:
         phi = np.concatenate([y_past, u_past, u_future])
         
         # Prediction using the AR model: y_f = A * y_p + B * u_p + C * u_f
-        y_pred = np.dot(self.A, y_past) + np.dot(self.B, u_past) + np.dot(self.C, u_future)
+        y_pred = self.Theta @ phi
         
         return y_pred, phi
 
 
-    def compute_control_signal(self, y_past, u_past):
+    def predict_cmd(self, y_past, u_past):
         """ Compute the optimal control signal u_f """
         # Regularized inversion term
-        CTC_reg = np.dot(self.C.T, self.C) + self.lam * np.eye(self.M)
+        CTC_reg = self.C @ self.C.T + self.lam * np.eye(self.M)
         
         # Compute the inverse
         CTC_inv = np.linalg.inv(CTC_reg)
         
         # Create the concatenated matrix [A^T C, B^T C]
-        ATC = np.dot(self.A.T, self.C)
-        BTC = np.dot(self.B.T, self.C)
+        ATC = self.A.T @ self.C
+        BTC = self.B.T @ self.C
+
         
         # Combine the past WFS measurements and past DM commands
         y_u_concat = np.concatenate([y_past, u_past])
+
+        print(CTC_inv.shape, ATC.shape, BTC.shape, y_u_concat.shape)
+        print(np.concatenate([ATC, BTC], axis=0).T.shape)
+        print((np.concatenate([ATC, BTC], axis=0).T@ y_u_concat).shape)
         
         # Compute control signal u_f
-        u_f = -np.dot(CTC_inv, np.dot(np.hstack([ATC, BTC]), y_u_concat))
+        u_f = - CTC_inv @ (np.concatenate([ATC, BTC], axis=0).T @ y_u_concat)
         
         return u_f
 
 
-    def rls_update(self, y_true, y_pred, phi):
+    def rls_update(self, y_true, y_past, u_past, u_future):
         """ Perform Recursive Least Squares (RLS) update """
         # y_true: true WFS measurement at step i+1
         # y_pred: predicted WFS measurement
         # phi: concatenated input vector used for prediction
-        
+        phi = np.concatenate([y_past, u_past, u_future])
         # Step 1: Compute the gain matrix K
-        phi_T_P = np.dot(phi.T, self.P)
-        gain_factor = 1 + (self.gamma)**(-1) * np.dot(phi_T_P, phi)
-        K = ((self.gamma)**(-1) * phi_T_P) / gain_factor
+        numerator = (1/self.gamma) * phi @ self.P
+        gain_factor = 1 + (1/self.gamma) * phi@numerator
+        K = numerator / gain_factor
         
         # Step 2: Calculate the prediction error
+        y_pred = self.predict_next_measurement(y_past, u_past, u_future)[0]
+
         error = y_true - y_pred
         
         # Step 3: Update the AR model coefficients (Theta = A, B, C combined)
-        Theta = np.concatenate([self.A.flatten(), self.B.flatten(), self.C.flatten()])
-        Theta = Theta + K * error
-        
-        # Reshape Theta back into A, B, C
-        split1 = self.A.size
-        split2 = split1 + self.B.size
-        self.A = Theta[:split1].reshape(self.A.shape)
-        self.B = Theta[split1:split2].reshape(self.B.shape)
-        self.C = Theta[split2:].reshape(self.C.shape)
-        
-        # Step 4: Update the inverse covariance matrix P
-        self.P = (self.P - np.outer(K, phi_T_P)) / self.gamma
+        self.Theta += np.outer(error,K.T)
 
+        self.A = self.Theta[:, :self.N]
+        self.B = self.Theta[:, self.N:self.N+self.M]
+        self.C = self.Theta[:, self.N+self.M:]
+
+        # Step 4: Update the inverse covariance matrix P
+        self.P = (self.P - np.outer(K, phi @ self.P)) / self.gamma
+
+    def fifo(self, array, new_value):
+        """ Update an array in FIFO manner """
+        np.roll(array, 1)
+        array[0] = new_value
+        return array
+
+
+#%%
 
 if __name__ == '__main__':
 
     # Define parameters
-    N = 5  # number of past WFS measurements
+    N = 10  # number of past WFS measurements
     M = 3  # number of future DM commands
-    gamma = 0.95  # forgetting factor
-    
 
-    # Initialize the AR model
-    ar_model = ARPredictiveModel(N, M, gamma)
 
-    # Example past and future data
-    y_past = np.random.randn(N)  # past WFS measurements
-    u_past = np.random.randn(N)  # past DM commands
-    u_future = np.random.randn(M)  # future DM commands
+    # args.modulation = 3
+    # env = get_env(args)
+    # env.gainCL = 0.9
 
-    # True future WFS measurement (for training)
-    y_true = np.random.randn(M)  # this would come from actual data
+    arms = [ARPredictiveModel(N, M) for _ in range(env.dm.coefs.size)]
 
-    # Prediction
-    y_pred, phi = ar_model.predict_next_measurement(y_past, u_past, u_future)
+    y_pred = np.zeros((env.dm.coefs.size, M))
+    y_true = np.zeros((env.dm.coefs.size, M))
 
-    # Perform RLS update with true measurement
-    ar_model.rls_update(y_true, y_pred, phi)
+    obs = env.reset_soft()
+    action = np.zeros(env.dm.coefs.size)
+
+    for i in range(args.nLoop):
+        action =+ np.random.choice([-1,1], env.dm.coefs.size) * 1e-3
+
+        obs,_, reward,strehl, done, info = env.step(i,torch.tensor(env.vec_to_img(action)))
+        y_obs = env.img_to_vec(obs)
+
+        print(strehl)
+
+        obs = env.img_to_vec(obs)
+
+        if i > 1:
+            for j in range(env.dm.coefs.size):
+                y_true[j] = arms[0].fifo(y_true[j], y_obs[j])
+
+        for i in range(env.dm.coefs.size):
+            arms[i].u_past = arms[i].fifo(arms[i].u_past, action[i])
+            arms[i].y_past = arms[i].fifo(arms[i].y_past, obs[i])
+            arms[i].u_future = arms[i].predict_cmd(arms[i].y_past, arms[i].u_past)
+            arms[i].rls_update(y_true[i], arms[i].y_past, arms[i].u_past, arms[i].u_future)
+        
+        action = np.array([arms[i].u_future[-1] for i in range(env.dm.coefs.size)])
+        
+
+        
+
+
+
+# %%
