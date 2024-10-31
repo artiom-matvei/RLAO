@@ -1,6 +1,5 @@
 #%%
 import os,sys
-import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -28,6 +27,7 @@ class DMDc:
         self.env = env  # AO environment object
         self.burn_in = 100  # number of iterations to burn in the model
         self.scale = 1e6 # scaling factor for the WFS measurements
+        self.C2M = np.linalg.pinv(self.env.M2C_CL.copy())
 
         # State space model
         self.B = np.eye(self.M)
@@ -45,13 +45,16 @@ class DMDc:
             obs,_, reward,strehl, done, info = self.env.step(i,action)
 
             if i >= self.burn_in and i != self.N + self.burn_in:
-                obs_now = np.matmul(self.env.modal_CM, self.env.wfsSignal)[:self.M] * self.scale
-                X0[:, i - self.burn_in] = obs_now
-                X1[:, i - self.burn_in] = obs_now
-                C[:, i - self.burn_in] = - self.env.gainCL * self.control_signal(obs_now)
+                obs_now = np.matmul(self.env.reconstructor, self.env.wfsSignal)
+                modal_obs_pol = self.C2M@(obs_now + self.env.dm.coefs.copy()) * self.scale
+                modal_obs_cl = self.C2M@obs_now * self.scale
+                X0[:, i - self.burn_in] = modal_obs_pol[:self.M] 
+                X1[:, i - self.burn_in] = modal_obs_pol[:self.M] 
+                C[:, i - self.burn_in] = self.env.gainCL * self.control_signal(modal_obs_cl[:self.M])
             elif i == self.N + self.burn_in:
-                obs_now = np.matmul(self.env.modal_CM, self.env.wfsSignal)[:self.M] * self.scale
-                X1[:, i - self.burn_in] = obs_now
+                obs_now = np.matmul(self.env.reconstructor, self.env.wfsSignal) * self.scale
+                modal_obs_pol = self.C2M@(obs_now + self.env.dm.coefs.copy())
+                X1[:, i - self.burn_in] = modal_obs_pol[:self.M] 
 
         return X0, X1[:,1:], C
 
@@ -75,6 +78,7 @@ class DMDc:
             # Construct the matrix A
             A = np.matmul(X1 - np.matmul(self.B, C), np.matmul(Vt.T, np.matmul(np.linalg.inv(np.diag(S)), U.T)))
 
+            self.A = A
             return A
         else:
                 Omega = np.vstack((X0, C))
@@ -94,12 +98,12 @@ class DMDc:
                 return A_approx, B_approx
 
 
-    def predict(self, obs, cmd, A):
+    def predict(self, obs, cmd):
         # Construct the transition matrix A
-        pred_obs = np.matmul(A, obs) + np.matmul(self.B, cmd)
+        pred_obs = np.matmul(self.A, obs) + np.matmul(self.B, cmd)
         return pred_obs
     
-    def test_predict(self, len, A):
+    def test_predict(self, len):
         # Construct the transition matrix A
         obs_hist = np.zeros((self.M, len))
         next_obs = np.zeros((self.M, len + 1))
@@ -113,14 +117,17 @@ class DMDc:
             obs,_, reward,strehl, done, info = self.env.step(i,action)
 
             if i >= self.burn_in and i != len + self.burn_in:
-                obs_now = np.matmul(self.env.modal_CM, self.env.wfsSignal)[:self.M] * self.scale
-                obs_hist[:, i - self.burn_in] = obs_now
-                next_obs[:, i - self.burn_in] = obs_now
-                cmd_now = - env.gainCL * self.control_signal(obs_now)
-                pred[:, i - self.burn_in] = self.predict(obs_now, cmd_now, A)
+                obs_now = np.matmul(self.env.reconstructor, self.env.wfsSignal)
+                modal_obs_pol = self.C2M@(obs_now + self.env.dm.coefs.copy()) * self.scale
+                modal_obs_cl = self.C2M@obs_now * self.scale
+                obs_hist[:, i - self.burn_in] = modal_obs_pol[:self.M]
+                next_obs[:, i - self.burn_in] = modal_obs_pol[:self.M]
+                cmd_now = env.gainCL * self.control_signal(modal_obs_cl[:self.M])
+                pred[:, i - self.burn_in] = self.predict(modal_obs_pol[:self.M], cmd_now)
             elif i == len + self.burn_in:
-                obs_now = np.matmul(self.env.modal_CM, self.env.wfsSignal)[:self.M] * self.scale
-                next_obs[:, i - self.burn_in] = obs_now
+                obs_now = np.matmul(self.env.reconstructor, self.env.wfsSignal)
+                modal_obs_pol = self.C2M@(obs_now + self.env.dm.coefs.copy()) * self.scale
+                next_obs[:, i - self.burn_in] = modal_obs_pol[:self.M]
 
         return obs_hist, next_obs[:, 1:], pred
 
@@ -135,7 +142,7 @@ if __name__ == '__main__':
     env.gainCL = 0.9
 
     # Define parameters
-    N = 1000  # number of past WFS measurements
+    N = 5000  # number of past WFS measurements
     M = 10  # number of modes to predict
 
     dmd = DMDc(N, M, env)
@@ -155,12 +162,47 @@ if __name__ == '__main__':
     dmd.env.dm.coefs = 0
     dmd.env.tel*dmd.env.dm*dmd.env.wfs
 
-    o,n,p = dmd.test_predict(20, A)
-    m = 0
-    plt.plot(o[m], label='Ground truth')
-    plt.plot(n[m], label='Shifted')
-    plt.plot(p[m], label='Prediction')
-    plt.legend()
-    plt.show()
+    o,n,p = dmd.test_predict(100)
+
+
+    import matplotlib.gridspec as gridspec
+    plt.style.use('ggplot')
+    cmap = plt.get_cmap('inferno')
+    num_modes = 10
+
+    st = ["No","DMDc"]
+
+    for i,vals in enumerate([o,p]):
+
+        fig = plt.figure(figsize=(8, 8))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
+
+        ax1 = plt.subplot(gs[0])
+        custom_colors = []
+        for mode in range(num_modes):
+            bins = np.arange(-0.02, 0.02 + 0.001, 0.001)
+            # counts, bins = np.histogram(pred[:-delay,mode] - modes[n + delay - 1:, mode], bins=bins)
+            # # Plot the outline using plt.step()
+            color = cmap(1 - (mode / (num_modes)))
+            custom_colors.append(color)
+            # plt.step(bins[:-1], counts, where='mid', color=color, label=f'Mode #{mode + 1}')
+            # plt.vlines(bins[0], 0, counts[0], colors=color)  # Leftmost vertical bar
+            # plt.vlines(bins[-2], 0, counts[-1], colors=color)
+            ax1.hist(n[mode, :] - vals[mode, :], color=color, bins=bins, alpha=np.linspace(1, 0.4, num_modes)[mode], label=f'Mode #{mode + 1}')
+            ax1.set_ylim(0, 30)
+
+        ax1.set_title(f'Histogram of Residuals - {st[i]} Prediction')
+
+        ax2 = plt.subplot(gs[1])  # Second subplot in the grid (smaller)
+        ax2.scatter(np.arange(1, num_modes + 1), np.std(vals - n, axis=1) , color=custom_colors, s=70, alpha=0.8)
+        ax2.set_title('Standard Deviation of Residuals per Mode')
+        ax2.set_xlabel('Mode Number')
+        ax2.set_ylim(0, 0.015)
+        # ax2.set_yscale('log')
+        # plt.title('Residual values from prediction')
+        ax1.legend()
+        plt.show()
+
+
 
 # %%
