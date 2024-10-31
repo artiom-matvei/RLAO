@@ -21,14 +21,16 @@ def create_frame(data_slice):
     return fig
 
 # Function to update the frame
-def update_frame(frame, data_cube, img):
+def update_frame(frame, data_cube, img, ax=None, title=False):
     data_slice = data_cube[frame]
     masked_data = np.ma.masked_invalid(data_slice)
     img.set_data(masked_data)
+    if title:
+        ax.set_title(f"Frame {frame + 1}")
     return img,
 
 # Function to create the GIF
-def create_gif(data_cube, frame_rate, output_file, vmin = None, vmax = None, dpi=200):
+def create_gif(data_cube, frame_rate, output_file, vmin = None, vmax = None, dpi=200, title=False):
     num_frames = data_cube.shape[0]
     fig, ax = plt.subplots()
     
