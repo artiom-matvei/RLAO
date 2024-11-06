@@ -15,7 +15,7 @@ hr = np.load(f'{script_dir}/images/hr.npy')
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/cp_unconditional/')
 
-B = 1
+B = 100
 channels = 4
 
 start_from_y = False
@@ -26,9 +26,9 @@ dt = -1/num_steps #reverse time
 s_min = model.sde.sigma_min
 s_max = model.sde.sigma_max
 
-eta = 0.
+eta = 0.05
 
-y = torch.from_numpy(lr)[:B].to(device)
+y = torch.from_numpy(lr).to(device)
 
 x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
 
