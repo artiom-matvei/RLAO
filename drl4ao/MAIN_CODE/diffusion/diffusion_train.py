@@ -69,7 +69,7 @@ infer = False
 
 if infer:
         # Get the env somehow
-        model = ScoreModel(checkpoints_directory='//Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/diffusion/checkpoints2/checkpoints2')
+        model = ScoreModel(checkpoints_directory='/Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/diffusion/checkpoints2/checkpoints2/')
         M2OPD = np.load('/Users/parkerlevesque/School/Research/AO/RLAO/drl4ao/MAIN_CODE/predictiveControl/saved_filters/M2OPD_300modes.npy')
         OPD2M = np.linalg.pinv(M2OPD)
         xpupil, ypupil = np.where(env.tel.pupil == 1)
