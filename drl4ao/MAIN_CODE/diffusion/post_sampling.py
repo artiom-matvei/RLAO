@@ -13,7 +13,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 lr = np.load(f'{script_dir}/images/lr.npy')
 hr = np.load(f'{script_dir}/images/hr.npy')
 
-model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/')
+model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
 B = 100
 channels = 4
