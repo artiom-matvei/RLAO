@@ -30,7 +30,7 @@ s_max = model.sde.sigma_max
 for eta in np.logspace(1, 2.2, 10):
 # eta = 0.05
 
-    y = torch.from_numpy(lr).to(device)
+    y = torch.from_numpy(lr[:B]).to(device)
 
     x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
 
