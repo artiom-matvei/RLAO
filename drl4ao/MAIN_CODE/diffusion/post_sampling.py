@@ -15,8 +15,9 @@ hr = np.load(f'{script_dir}/images/hr.npy')
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
-B = 100
+B = 32
 channels = 4
+
 
 # %%
 num_steps = 100
