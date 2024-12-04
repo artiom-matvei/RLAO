@@ -15,7 +15,7 @@ hr = np.load(f'{script_dir}/images/hr.npy')
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
-B = 32
+B = 1024
 channels = 4
 
 
@@ -120,9 +120,9 @@ with torch.no_grad():
         # plt.legend()
 
         # plt.show()
-        np.save(f'{script_dir}/images/batch_pow_lr_{eta}.npy', batch_pow_lr)
-        np.save(f'{script_dir}/images/batch_pow_hr_{eta}.npy', batch_pow_hr)
-        np.save(f'{script_dir}/images/batch_pow_sam_{eta}.npy', batch_pow_sam)
+        np.save(f'{script_dir}/images/batch_pow_lr_{eta:.0f}.npy', batch_pow_lr)
+        np.save(f'{script_dir}/images/batch_pow_hr_{eta:.0f}.npy', batch_pow_hr)
+        np.save(f'{script_dir}/images/batch_pow_sam_{eta:.0f}.npy', batch_pow_sam)
 
         
 
