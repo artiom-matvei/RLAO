@@ -41,12 +41,12 @@ for eta in np.logspace(1, 2.2, 10):
         t = torch.tensor(t).to(device) * torch.ones(B).to(device)
         z = torch.randn_like(x_t).to(device)
         dw = abs(dt)**(1/2) * z
-        g = model.sde.diffusion(t, x_t).to(device)
+        g = model.sde.diffusion(t, x_t)
 
-        sig_t = model.sde.sigma(t).to(device).unsqueeze(1).unsqueeze(2).unsqueeze(3)
+        sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
 
         score_likelihood = (y - x_t) / (sig_t ** 2 + eta**2)
-        score_prior = model.score(t, x_t).to(device)
+        score_prior = model.score(t, x_t)
 
         
         dx = - g**2 * ( score_likelihood + score_prior) * dt + g * dw
