@@ -62,7 +62,7 @@ with torch.no_grad():
         hr_fft_shifted = np.fft.fftshift(hr_fft2, axes=(-2, -1))
 
 
-        sam_fft2 = np.fft.fft2(x_t.detach().sum(dim=1))
+        sam_fft2 = np.fft.fft2(x_t.detach().cpu().sum(dim=1))
         sam_fft_shifted = np.fft.fftshift(sam_fft2, axes=(-2, -1))
 
 
