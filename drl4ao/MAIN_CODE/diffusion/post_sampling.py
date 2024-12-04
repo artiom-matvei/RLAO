@@ -34,7 +34,7 @@ with torch.no_grad():
 
         x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
 
-        t_start = 1 # if not start_from_y else np.log(np.std(lr[0][0] - hr[0][0])) / np.log(s_max / s_min)
+        t_start = np.log(np.std(lr[0][0] - hr[0][0])) / np.log(s_max / s_min)
 
         for i, t in enumerate(np.linspace(t_start, 0, num_steps)):
             print(f'Step {i}/{num_steps}')
