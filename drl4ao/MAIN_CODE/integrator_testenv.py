@@ -20,7 +20,7 @@ from types import SimpleNamespace
 import matplotlib.pyplot as plt
 from OOPAOEnv.OOPAOEnv_VPG import OOPAO
 from VPG.policy_networks import CustomCNN
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 
 #%%
 env = OOPAO()
@@ -35,7 +35,7 @@ policy_kwargs = dict(
 
 
 model = PPO("MlpPolicy", env, policy_kwargs=policy_kwargs, verbose=1)
-model.learn(total_timesteps=10000, progress_bar=True)
+model.learn(total_timesteps=int(2e4), progress_bar=True)
 
 
 # %%
