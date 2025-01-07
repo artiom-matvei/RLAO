@@ -76,8 +76,8 @@ class OOPAO(gym.Env):
 
         # Histories
         self.n_history = 20
-        self.obs_history = torch.zeros((self.n_history, 21, 21))
-        self.action_history = torch.zeros((self.n_history, 21, 21))
+        self.obs_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
+        self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
         # Spaces
         self.observation_space = gym.spaces.Box(
@@ -110,19 +110,19 @@ class OOPAO(gym.Env):
         self.set_params(self.args)
 
         self.d = self.args.delay
-        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator))] * self.d
+        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator)).to(self.device)] * self.d
         
 
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         # self.set_params()
-        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator))] * self.d
+        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator)).to(self.device)] * self.d
 
-        self.obs_history = torch.zeros((self.n_history, 21, 21))
-        self.action_history = torch.zeros((self.n_history, 21, 21))
+        self.obs_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
+        self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
-        obs = -torch.tensor(np.matmul(self.reconstructor,self.get_slopes()), dtype=torch.float32)
+        obs = -torch.tensor(np.matmul(self.reconstructor,self.get_slopes()), dtype=torch.float32).to(self.device)
         obs = self.vec_to_img(obs)*1e6
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
@@ -133,12 +133,12 @@ class OOPAO(gym.Env):
     
 
     def reset_soft(self):
-        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator))] * self.d
+        self.action_buffer = [torch.zeros((self.nActuator, self.nActuator)).to(self.device)] * self.d
 
-        self.obs_history = torch.zeros((self.n_history, 21, 21))
-        self.action_history = torch.zeros((self.n_history, 21, 21))
+        self.obs_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
+        self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
-        obs = -torch.tensor(np.matmul(self.reconstructor,self.get_slopes()))
+        obs = -torch.tensor(np.matmul(self.reconstructor,self.get_slopes())).to(self.device)
         obs = self.vec_to_img(obs)*1e6
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
@@ -577,7 +577,7 @@ class OOPAO(gym.Env):
         self.wfsSignal=self.wfs.signal
         
         slopes = self.wfsSignal 
-        obs = -torch.tensor(np.matmul(self.reconstructor,slopes), dtype=torch.float32)
+        obs = -torch.tensor(np.matmul(self.reconstructor,slopes), dtype=torch.float32).to(self.device)
         obs = self.vec_to_img(obs)*1e6
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
@@ -625,13 +625,7 @@ class OOPAO(gym.Env):
             reward = self.get_strehl()
 
         return reward
-    
-    def sample_noise(self, sigma, use_torch=False):
 
-        noise = self.F @ (sigma * np.random.normal(0,1 , size = (int(self.dm.nValidAct),))) # 357
-        noise = torch.tensor(noise).float().to(self.device)
-        return self.vec_to_img(noise, use_torch)
-    
     def vec_to_img(self, action_vec, use_torch=True):
         if use_torch:
             valid_actus = torch.zeros((self.nActuator, self.nActuator)).float().to(self.device)
@@ -639,7 +633,7 @@ class OOPAO(gym.Env):
         else:
             valid_actus = np.zeros((self.nActuator, self.nActuator))
 
-        valid_actus[self.xvalid, self.yvalid] = action_vec
+        valid_actus[self.xvalid, self.yvalid] = torch.tensor(action_vec).to(self.device)
 
         return valid_actus
 
