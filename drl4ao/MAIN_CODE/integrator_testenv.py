@@ -30,12 +30,11 @@ action_dim = env.action_space.shape
 
 policy_kwargs = dict(
     features_extractor_class=CustomCNN,
-    features_extractor_kwargs=dict(features_dim=128),
+    features_extractor_kwargs=dict(features_dim=512),
 )
 
 
-
-model = PPO("MlpPolicy", env, 
+model = PPO("CnnPolicy", env, 
             learning_rate=1e-4, clip_range=0.3,
             policy_kwargs=policy_kwargs, verbose=1,
             tensorboard_log="./ppo_ao_tensorboard/")
