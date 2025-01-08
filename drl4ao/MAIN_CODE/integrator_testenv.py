@@ -34,8 +34,8 @@ policy_kwargs = dict(
 )
 
 
-model = PPO("CnnPolicy", env, 
-            learning_rate=1e-4, clip_range=0.3,
+model = SAC("CnnPolicy", env, 
+            # learning_rate=1e-4, clip_range=0.3,
             policy_kwargs=policy_kwargs, verbose=1,
             tensorboard_log="./ppo_ao_tensorboard/")
 
