@@ -590,7 +590,10 @@ class OOPAO(gym.Env):
         self.SR.append(strehl)
        
         # Extra
-        reward = -1 * np.linalg.norm(obs.cpu().numpy())
+
+        # reward = -1 * np.linalg.norm(obs.cpu().numpy())
+        # For now we will use the Strehl ratio as the reward
+        reward = strehl
         info = {"strehl":strehl}
         terminated = 0
         truncated = 0
