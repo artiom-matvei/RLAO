@@ -35,7 +35,11 @@ policy_kwargs = dict(
 
 
 
-model = PPO("MlpPolicy", env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log="./ppo_ao_tensorboard/")
+model = PPO("MlpPolicy", env, 
+            learning_rate=1e-4, clip_range=0.3,
+            policy_kwargs=policy_kwargs, verbose=1,
+            tensorboard_log="./ppo_ao_tensorboard/")
+
 model.learn(total_timesteps=int(2e5), progress_bar=True)
 
 model.save("PPO_oopao")
