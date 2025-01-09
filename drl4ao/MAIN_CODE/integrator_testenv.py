@@ -44,7 +44,7 @@ model = PPO("CnnPolicy", train_env,
             policy_kwargs=policy_kwargs, verbose=1,
             tensorboard_log="./ppo_ao_tensorboard/")
 
-model.learn(total_timesteps=int(2e5), progress_bar=True, callback=custom_eval_callback)
+model.learn(total_timesteps=int(6e5), progress_bar=True, callback=custom_eval_callback)
 
 model.save("PPO_oopao")
 # %%

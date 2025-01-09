@@ -555,6 +555,8 @@ class OOPAO(gym.Env):
         # slopes, reward (-1*norm of slopes), done as false (no current condition)
         # and (currently empty) info dictionary, where one could store useful
         # data about the simulation
+        if len(action.shape) == 1:
+            action = self.vec_to_img(action)
 
         self.action_buffer.append(action)
 
