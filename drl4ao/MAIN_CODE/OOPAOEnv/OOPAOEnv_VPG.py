@@ -116,7 +116,12 @@ class OOPAO(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        # self.set_params()
+        
+        self.dm.coefs = 0
+        self.dm_prev = self.dm.coefs.copy()
+        self.atm.generateNewPhaseScreen(seed = np.random.randint(0, 1e5))
+        self.tel*self.wfs
+
         self.action_buffer = [torch.zeros((self.nActuator, self.nActuator)).to(self.device)] * self.d
 
         self.obs_history = torch.zeros((self.n_history, 21, 21)).to(self.device)

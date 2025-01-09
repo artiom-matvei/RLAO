@@ -1,6 +1,8 @@
 logs/
 docs/
 images/
+ppo_ao_tensorboard/
+SB3/
 README_old.md
 
 saved_filters/
