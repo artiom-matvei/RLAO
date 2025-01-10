@@ -27,7 +27,7 @@ agent = SACAgent(env, policy_net, q_net, target_q_net, replay_buffer)
 # Warmup the agent
 agent.warmup(num_steps=int(1e4))
 
-rewards = agent.train(num_episodes=100, max_steps=200, update_frequency=20)
+rewards = agent.train(num_episodes=200, max_steps=1000, update_frequency=100)
 
 
 np.save("rewards.npy", np.array(rewards))
