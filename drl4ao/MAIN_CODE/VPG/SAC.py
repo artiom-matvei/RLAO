@@ -26,7 +26,7 @@ class ReplayBuffer:
 # Soft Actor-Critic Agent
 class SACAgent:
     def __init__(self, env, policy_net, q_net, target_q_net, replay_buffer, 
-                 gamma=0.99, tau=0.005, alpha=0.2, lr=3e-4, batch_size=256):
+                 gamma=0.1, tau=0.005, alpha=0.2, lr=1e-4, batch_size=256):
         self.env = env
         self.policy_net = policy_net
         self.q_net = q_net
@@ -34,19 +34,25 @@ class SACAgent:
         self.replay_buffer = replay_buffer
         self.gamma = gamma
         self.tau = tau
-        self.alpha = alpha
+        self.static_alpha = alpha
         self.batch_size = batch_size
+
+        self.log_alpha = torch.tensor(np.log(alpha), requires_grad=True)  # Learnable log_alpha
+        self.alpha = self.log_alpha.exp()  # alpha
+        self.alpha_optimizer = optim.Adam([self.log_alpha], lr=1e-2)
+        self.target_entropy = -357  # Target entropy, usually -dim(action space)
+
 
         # Optimizers
         self.q_optimizer = optim.Adam(self.q_net.parameters(), lr=lr)
-        self.policy_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.policy_optimizer = optim.Adam(self.policy_net.parameters(), lr=lr, weight_decay=1e-5)
 
         # Loss function
         self.criterion = nn.MSELoss()
 
     def update(self):
         if len(self.replay_buffer) < self.batch_size:
-            return
+            return None, None, None, None
 
         # Sample from the replay buffer
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
@@ -90,9 +96,20 @@ class SACAgent:
         policy_loss.backward()
         self.policy_optimizer.step()
 
+            # Update alpha (entropy coefficient)
+        alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+        self.alpha = self.log_alpha.exp()  # Update alpha
+
+
         # Soft update of target Q-network
-        for target_param, param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        with torch.no_grad():
+            for target_param, param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+
+        return q_loss, policy_loss, current_q_values, actions
 
     def select_action(self, state, deterministic=False):
         state = torch.FloatTensor(state).unsqueeze(0)
@@ -106,6 +123,7 @@ class SACAgent:
         for episode in range(num_episodes):
             state, _ = self.env.reset()
             episode_reward = 0
+            step_count = 0
             for step in range(max_steps):
                 action = self.select_action(state)
                 next_state, reward, done, *_ = self.env.step(action)
@@ -113,14 +131,29 @@ class SACAgent:
                 state = next_state
                 episode_reward += reward
 
+                step_count += 1
+
                 if step % update_frequency == 0:
-                    self.update()
+                    q_loss, policy_loss, current_q_values, actions = self.update()
+
+                    if q_loss is not None:
+                        print(f"  Q-Loss: {q_loss.item()}")
+                        print(f"  Policy Loss: {policy_loss.item()}")
+                        print(f"  Mean Q-value: {current_q_values.mean().item()}")
+                        rms_actions = torch.sqrt(torch.mean(actions.square()))
+                        print(f"  Actions Mean/Std: {rms_actions.item()}/{actions.std().item()}")
+                        print(f"  Alpha: {self.alpha.item()}")
+                    else:
+                        print("  Not enough samples in the replay buffer")
 
                 if done:
                     break
 
-            rewards.append(episode_reward)
-            print(f"Episode {episode + 1}, Reward: {episode_reward}")
+            rewards.append(episode_reward / step_count)
+            print(f"Episode {episode}:")
+            print(f"  Mean reward: {episode_reward / step_count}")
+
+
 
         return rewards
     
@@ -148,33 +181,53 @@ class SACAgent:
 
     # Define your policy network and Q-network
 class PolicyNet(nn.Module):
-    def __init__(self, state_dim, nValidAct, xvalid, yvalid):
+    def __init__(self, state_dim, nValidAct, xvalid, yvalid, gainCL=0.5):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Conv2d(state_dim[0], 128, kernel_size=3, stride=1, padding=1),
             nn.LeakyReLU(),
             nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(256, 1, kernel_size=3, stride=1, padding=1),
-            nn.LeakyReLU(),
+            nn.Conv2d(256, 1, kernel_size=3, stride=1, padding=1)
         )
 
-        self.log_std = nn.Parameter(torch.zeros(nValidAct))  # Learnable log_std
+        self.log_std = nn.Parameter(torch.ones(nValidAct) * 1e-6)  # Learnable log_std
+        self.delta_scale = nn.Parameter(torch.tensor(1e-3))
+
 
         self.xvalid = xvalid
         self.yvalid = yvalid
+        self.gainCL = gainCL
 
 
     def sample(self, state):
+
         mean2D = self.fc(state).squeeze(1)
         meanVec = mean2D[:, self.xvalid, self.yvalid]
 
-        log_std = self.log_std.expand_as(meanVec).clamp(min=-20, max=2)
-        std = torch.exp(log_std)
+        log_std = self.log_std.clamp(min=-20, max=2).expand_as(meanVec)
+        std = torch.exp(log_std).clamp(min=1e-6)
         dist = torch.distributions.Normal(meanVec, std)
-        action = dist.rsample()
-        log_prob = dist.log_prob(action).sum(axis=-1, keepdims=True)
+
+        delta_action = dist.rsample()
+        delta_action = torch.clamp(delta_action, min=-1e-4, max=1e-4)
+        log_prob = dist.log_prob(delta_action).sum(axis=-1, keepdims=True)
+
+        base_action = state[:, 0, self.xvalid, self.yvalid]
+        action = (base_action + self.delta_scale * delta_action) * self.gainCL
+
         return action, log_prob
+    
+    def forward(self, state):
+        mean2D = self.fc(state).squeeze(1)
+        meanVec = mean2D[:, self.xvalid, self.yvalid]
+
+        base_action = state[:, 0, self.xvalid, self.yvalid]
+
+        return (base_action + self.delta_scale * meanVec) * self.gainCL 
+
+
+
 
 class QNet(nn.Module):
     def __init__(self, state_dim, nValidAct, xvalid, yvalid):
@@ -184,8 +237,7 @@ class QNet(nn.Module):
             nn.LeakyReLU(),
             nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
             nn.LeakyReLU(),
-            nn.Conv2d(256, 1, kernel_size=3, stride=1, padding=1),
-            nn.LeakyReLU(),
+            nn.Conv2d(256, 1, kernel_size=3, stride=1, padding=1)
         )
         self.q = nn.Linear(nValidAct, 1)
 

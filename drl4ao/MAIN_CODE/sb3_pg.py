@@ -22,12 +22,23 @@ q_net = QNet(state_dim, nValidAct, env.xvalid, env.yvalid)
 target_q_net = QNet(state_dim, nValidAct, env.xvalid, env.yvalid)
 target_q_net.load_state_dict(q_net.state_dict())
 
-agent = SACAgent(env, policy_net, q_net, target_q_net, replay_buffer)
 
 # Warmup the agent
-agent.warmup(num_steps=int(1e4))
+# agent.warmup(num_steps=int(1e4))
 
-rewards = agent.train(num_episodes=200, max_steps=1000, update_frequency=100)
+def init_weights(m):
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        nn.init.xavier_uniform_(m.weight)
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
+
+policy_net.apply(init_weights)
+q_net.apply(init_weights)
+target_q_net.apply(init_weights)
+
+agent = SACAgent(env, policy_net, q_net, target_q_net, replay_buffer, alpha=0.0001)
+
+rewards = agent.train(num_episodes=200, max_steps=250, update_frequency=100)
 
 
 np.save("rewards.npy", np.array(rewards))
