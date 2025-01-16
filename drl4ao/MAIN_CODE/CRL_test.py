@@ -40,7 +40,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "OOPAO-v0"
     """the environment id of the task"""
-    total_timesteps: int = 1000#1000000
+    total_timesteps: int = 100000#1000000
     """total timesteps of the experiments"""
     buffer_size: int = int(1e4)
     """the replay memory buffer size"""
@@ -50,7 +50,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 1e2#5e3
+    learning_starts: int = 1e3#5e3
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         # ALGO LOGIC: put action logic here
         if global_step < args.learning_starts:
             if global_step % 100 == 0:
-                print(f"WARMUP: {global_step}/{args.learning_starts}")
+                print(f"WARMUP: {global_step}/{int(args.learning_starts)}")
                 actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
             else:
                 actions, _, _ = actor.get_action(torch.Tensor(obs).to(device))
@@ -326,7 +326,7 @@ if __name__ == "__main__":
                 for param, target_param in zip(qf2.parameters(), qf2_target.parameters()):
                     target_param.data.copy_(args.tau * param.data + (1 - args.tau) * target_param.data)
 
-            if global_step % 100 == 0:
+            if global_step % 1000 == 0:
                 writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), global_step)
                 writer.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), global_step)
                 writer.add_scalar("losses/qf1_loss", qf1_loss.item(), global_step)
@@ -335,6 +335,7 @@ if __name__ == "__main__":
                 writer.add_scalar("losses/actor_loss", actor_loss.item(), global_step)
                 writer.add_scalar("losses/alpha", alpha, global_step)
                 print("SPS:", int(global_step / (time.time() - start_time)))
+                print(f"Total steps: {global_step}")
                 writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
                 if args.autotune:
                     writer.add_scalar("losses/alpha_loss", alpha_loss.item(), global_step)
