@@ -103,11 +103,13 @@ class SoftQNetwork(nn.Module):
             nn.Flatten(),
             nn.Linear(9, 1)
         )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.env = env
-        self.M2C_tt = env.get_attr("M2C_tt")[0]
+        self.M2C_tt = torch.tensor(env.get_attr("M2C_tt")[0], dtype=torch.float32, device=self.device)
 
     def forward(self, x, a):
-        a = torch.tensor(self.M2C_tt, dtype=torch.float32)@a.T
+        a = self.M2C_tt@a.T
         a = self.env.call("vec_to_img",a)[0].unsqueeze(1)
         x = torch.cat([x, a], 1)
         x = self.net(x)
