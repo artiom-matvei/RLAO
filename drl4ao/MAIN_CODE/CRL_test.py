@@ -40,9 +40,9 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "OOPAO-v0"
     """the environment id of the task"""
-    total_timesteps: int = 100000#1000000
+    total_timesteps: int = 50000#1000000
     """total timesteps of the experiments"""
-    buffer_size: int = int(1e6)
+    buffer_size: int = int(5e4)
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
