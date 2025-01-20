@@ -54,16 +54,18 @@ class Args:
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 3e-4#1e-3
+    q_lr: float = 1e-4#1e-3
     """the learning rate of the Q network network optimizer"""
     policy_frequency: int = 2
     """the frequency of training policy (delayed)"""
-    target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
+    target_network_frequency: int = 2#1  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
     alpha: float = 0.01
     """Entropy regularization coefficient."""
     autotune: bool = True
     """automatic tuning of the entropy coefficient"""
+    max_grad_norm: float = 0.5
+    """the maximum norm for the gradient clipping"""
 
 
 # def make_env(env_id, seed, idx, capture_video, run_name):
@@ -294,6 +296,7 @@ if __name__ == "__main__":
             # optimize the model
             q_optimizer.zero_grad()
             qf_loss.backward()
+            nn.utils.clip_grad_norm_(qf1.parameters(), args.max_grad_norm)
             q_optimizer.step()
 
             if global_step % args.policy_frequency == 0:  # TD 3 Delayed update support
@@ -308,6 +311,7 @@ if __name__ == "__main__":
 
                     actor_optimizer.zero_grad()
                     actor_loss.backward()
+                    nn.utils.clip_grad_norm_(actor.parameters(), args.max_grad_norm)
                     actor_optimizer.step()
 
                     if args.autotune:

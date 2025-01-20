@@ -106,6 +106,9 @@ class OOPAO(gym.Env):
         self.args.delay = 1
         self.args.nLoop = 1000
 
+        self.current_steps = 0
+        self.episode_reward_sum = 0
+
 
         # Set the parameters
         self.set_params_file(self.args.param_file,self.args.oopao_path) # set parameter file
@@ -118,6 +121,9 @@ class OOPAO(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
+
+        self.current_steps = 0
+        self.episode_reward_sum = 0  # Initialize in reset
         
         self.dm.coefs = 0
         self.dm_prev = self.dm.coefs.copy()
@@ -561,15 +567,33 @@ class OOPAO(gym.Env):
         
         strehl = self.get_strehl()
         self.SR.append(strehl)
+
+        self.current_steps += 1
+
+        done = self.current_steps >= self.args.nLoop
+        truncated = done
        
         # Extra
 
         # reward = -1 * np.linalg.norm(obs.cpu().numpy())
         # For now we will use the Strehl ratio as the reward
         reward = strehl
+        self.episode_reward_sum += reward
+        
         info = {"strehl":strehl}
         terminated = 0
-        truncated = 0
+
+            # If episode is ending, add the final_info with episode statistics
+        if done:
+            epinfo = {
+                "episode": {
+                    "r": self.episode_reward_sum,  # Need to track this
+                    "l": self.current_steps,
+                }
+            }
+            info["final_info"] = epinfo
+            self.current_steps = 0
+            self.episode_reward_sum = 0  # Reset for next episode
 
         return self.obs_history.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
