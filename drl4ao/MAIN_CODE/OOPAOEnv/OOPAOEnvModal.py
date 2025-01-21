@@ -144,6 +144,75 @@ class OOPAO(gym.Env):
         return self.obs_history.cpu().numpy(), info
     
 
+    def step(self, action): # action, showAtmos = True
+        # Single AO step. Action defines DM shape and function returns WFS
+        # slopes, reward (-1*norm of slopes), done as false (no current condition)
+        # and (currently empty) info dictionary, where one could store useful
+        # data about the simulation
+        
+        action = self.vec_to_img(self.M2C_tt@action)
+
+        self.action_buffer.append(action)
+
+        action = self.img_to_vec(self.action_buffer[0])*1e-6
+
+        del self.action_buffer[0]
+
+        # update phase screens => overwrite tel.OPD and consequently tel.src.phase
+        self.atm.update()
+
+        # propagate to the WFS with the CL commands applied
+        
+        self.tel*self.dm*self.wfs
+
+        # Integrator
+        # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
+        
+
+
+        self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action)
+        self.dm_prev = self.dm.coefs.copy()
+
+        # store the slopes after computing the commands => 2 frames delay
+        
+        self.wfsSignal=self.wfs.signal
+        
+        slopes = self.wfsSignal 
+        obs = -torch.tensor(np.matmul(self.reconstructor,slopes), dtype=torch.float32).to(self.device)
+        obs = self.vec_to_img(obs)*1e6
+
+        self.obs_history = self.roll_buffer(self.obs_history, obs)
+        
+        self.OPD=self.tel.OPD[np.where(self.tel.pupil>0)]
+      
+        # Save Strehl ratio to calculate Episode Average
+        
+        strehl = self.get_strehl()
+        self.SR.append(strehl)
+
+        self.current_steps += 1
+
+        done = self.current_steps >= self.args.nLoop
+        truncated = done
+       
+        # Extra
+
+        # reward = -1 * np.linalg.norm(obs.cpu().numpy())
+        # For now we will use the Strehl ratio as the reward
+        reward = strehl
+
+        info = {"strehl":strehl}
+        terminated = 0
+
+            # If episode is ending, add the final_info with episode statistics
+        if done:
+            # info["final_observation"] = self.obs_history.cpu().numpy()
+            self.current_steps = 0
+
+        return self.obs_history.cpu().numpy(), reward, bool(terminated), bool(truncated), info
+
+
+
     def reset_soft(self):
         self.action_buffer = [torch.zeros((self.nActuator, self.nActuator)).to(self.device)] * self.d
 
@@ -520,73 +589,6 @@ class OOPAO(gym.Env):
         #plt.close()
         return self.LE_PSF,np.log10(self.tel.PSF)
 
-
-    def step(self, action): # action, showAtmos = True
-        # Single AO step. Action defines DM shape and function returns WFS
-        # slopes, reward (-1*norm of slopes), done as false (no current condition)
-        # and (currently empty) info dictionary, where one could store useful
-        # data about the simulation
-        
-        action = self.vec_to_img(self.M2C_tt@action)
-
-        self.action_buffer.append(action)
-
-        action = self.img_to_vec(self.action_buffer[0])*1e-6
-
-        del self.action_buffer[0]
-
-        # update phase screens => overwrite tel.OPD and consequently tel.src.phase
-        self.atm.update()
-
-        # propagate to the WFS with the CL commands applied
-        
-        self.tel*self.dm*self.wfs
-
-        # Integrator
-        # self.dm.coefs=self.dm.coefs-self.gainCL*np.matmul(self.reconstructor,self.wfsSignal)  
-        
-
-
-        self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action)
-        self.dm_prev = self.dm.coefs.copy()
-
-        # store the slopes after computing the commands => 2 frames delay
-        
-        self.wfsSignal=self.wfs.signal
-        
-        slopes = self.wfsSignal 
-        obs = -torch.tensor(np.matmul(self.reconstructor,slopes), dtype=torch.float32).to(self.device)
-        obs = self.vec_to_img(obs)*1e6
-
-        self.obs_history = self.roll_buffer(self.obs_history, obs)
-        
-        self.OPD=self.tel.OPD[np.where(self.tel.pupil>0)]
-      
-        # Save Strehl ratio to calculate Episode Average
-        
-        strehl = self.get_strehl()
-        self.SR.append(strehl)
-
-        self.current_steps += 1
-
-        done = self.current_steps >= self.args.nLoop
-        truncated = done
-       
-        # Extra
-
-        # reward = -1 * np.linalg.norm(obs.cpu().numpy())
-        # For now we will use the Strehl ratio as the reward
-        reward = strehl
-
-        info = {"strehl":strehl}
-        terminated = 0
-
-            # If episode is ending, add the final_info with episode statistics
-        if done:
-            # info["final_observation"] = self.obs_history.cpu().numpy()
-            self.current_steps = 0
-
-        return self.obs_history.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
 
     def calculate_strehl_AVG(self):
