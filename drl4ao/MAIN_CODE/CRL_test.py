@@ -260,13 +260,9 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, terminations, truncations, infos = envs.step(actions)
 
-        if any(truncations):
-            print("Truncation occurred. Infos:", infos.keys())
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if "final_info" in infos:
-            print("in final_info")
             for info in infos["final_info"]:
-                print(info)
                 print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                 writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                 writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
@@ -276,7 +272,6 @@ if __name__ == "__main__":
         real_next_obs = next_obs.copy()
         for idx, trunc in enumerate(truncations):
             if trunc:
-                print("in trunc")
                 real_next_obs[idx] = infos["final_observation"][idx]
         rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
 
