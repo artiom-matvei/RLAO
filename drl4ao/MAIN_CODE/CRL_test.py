@@ -86,6 +86,7 @@ class Args:
 def make_env():
     def thunk():
         env = OOPAO()
+        env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
     return thunk
 
@@ -259,6 +260,8 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, terminations, truncations, infos = envs.step(actions)
 
+        if any(truncations):
+            print("Truncation occurred. Infos:", infos.keys())
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if "final_info" in infos:
             print("in final_info")
