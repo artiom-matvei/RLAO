@@ -104,7 +104,7 @@ class OOPAO(gym.Env):
         self.args = SimpleNamespace(**conf)
         self.args.modulation = 3
         self.args.delay = 1
-        self.args.nLoop = 10#00
+        self.args.nLoop = 1000
 
         self.current_steps = 0
 
