@@ -195,7 +195,7 @@ class OOPAO(gym.Env):
         # reward = -1 * np.linalg.norm(obs.cpu().numpy())
         # For now we will use the Strehl ratio as the reward
         # reward = strehl
-        reward = - np.abs(obs)**2
+        reward = - np.linalg.norm(obs.cpu())**2
 
         info = {"strehl":strehl}
         terminated = 0
