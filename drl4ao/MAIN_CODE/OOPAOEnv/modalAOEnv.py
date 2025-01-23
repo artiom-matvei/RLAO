@@ -135,7 +135,7 @@ class OOPAO(gym.Env):
         # self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
         obs = -torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        obs *= 1e6
+        obs *= 1e9
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
 
@@ -152,7 +152,7 @@ class OOPAO(gym.Env):
 
         self.action_buffer.append(action)
         
-        action = self.M2C_tt@self.action_buffer[0] * 1e-6
+        action = self.M2C_tt@self.action_buffer[0] * 1e-9
 
         del self.action_buffer[0]
 
@@ -174,7 +174,7 @@ class OOPAO(gym.Env):
         
         slopes = self.wfsSignal 
         obs = -torch.tensor(np.matmul(self.reconstructor_tt,slopes), dtype=torch.float32).to(self.device)
-        obs *= 1e6
+        obs *= 1e9
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
         
