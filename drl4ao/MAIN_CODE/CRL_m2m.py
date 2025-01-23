@@ -124,15 +124,36 @@ class Actor(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(20 * 2, 256),
+            nn.Linear(20, 256),
             nn.LeakyReLU(),
             nn.Linear(256, 256),
             nn.LeakyReLU(),
             nn.Linear(256, 64)
         )
+        self.mode_processors = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(20, 256),  # Process temporal info for each mode
+                nn.ReLU(),
+                nn.Linear(256, 256),
+                nn.ReLU()
+            ) for _ in range(2)
+        ])
 
-        self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
-        self.fc_logstd = nn.Linear(64, np.prod(env.single_action_space.shape))
+        self.fc_mean = nn.Sequential(
+            nn.Linear(2 * 256, 128),
+            nn.LeakyReLU(),
+            nn.Linear(128, np.prod(env.single_action_space.shape))
+        )
+
+        self.fc_logstd = nn.Sequential(
+            nn.Linear(2 * 256, 128),
+            nn.LeakyReLU(),
+            nn.Linear(128, np.prod(env.single_action_space.shape))
+        )
+
+
+        # self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
+        # self.fc_logstd = nn.Linear(64, np.prod(env.single_action_space.shape))
         # action rescaling
         self.register_buffer(
             "action_scale", torch.tensor((env.action_space.high - env.action_space.low) / 2.0, dtype=torch.float32)
@@ -142,8 +163,13 @@ class Actor(nn.Module):
         )
 
     def forward(self, x):
-        x = x.view(x.shape[0], -1)
-        x = self.net(x)
+        # Process each mode separately
+        mode_outputs = []
+        for i in range(x.shape[2]):  # Iterate over modes
+            mode_out = self.mode_processors[i](x[:, :, i])  # Shape: (batch_size, hidden_dim)
+            mode_outputs.append(mode_out)
+
+        x = torch.cat(mode_outputs, dim=1)  # Shape: (batch_size, 2 * hidden_dim)
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
         log_std = torch.tanh(log_std)
