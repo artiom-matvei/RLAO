@@ -6,6 +6,7 @@ import random
 import time
 from dataclasses import dataclass
 
+import matplotlib.pyplot as plt
 import gymnasium as gym
 import numpy as np
 import torch
@@ -15,7 +16,7 @@ import torch.optim as optim
 import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
-from OOPAOEnv.OOPAOEnvModal import OOPAO
+from OOPAOEnv.modalAOEnv import OOPAO
 
 #%%
 @dataclass
