@@ -81,6 +81,8 @@ class OOPAO(gym.Env):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.network = None
         self.net_gain = 0.5
+        self.scale_down = 1e-6
+        self.scale_up = 1e6
 
         # Histories
         self.n_history = 20
@@ -135,7 +137,7 @@ class OOPAO(gym.Env):
         # self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
         obs = -torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        obs *= 1e9
+        obs *= self.scale_up
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
 
@@ -150,9 +152,9 @@ class OOPAO(gym.Env):
         # and (currently empty) info dictionary, where one could store useful
         # data about the simulation
 
-        self.action_buffer.append(action)
-        
-        action = self.M2C_tt@self.action_buffer[0] * 1e-9
+        self.action_buffer.append(torch.tensor(action).to(device=self.device, dtype=torch.float32))
+    
+        action = self.M2C_tt.cpu().numpy()@self.action_buffer[0].cpu().numpy() * self.scale_down
 
         del self.action_buffer[0]
 
@@ -174,7 +176,7 @@ class OOPAO(gym.Env):
         
         slopes = self.wfsSignal 
         obs = -torch.tensor(np.matmul(self.reconstructor_tt,slopes), dtype=torch.float32).to(self.device)
-        obs *= 1e9
+        obs *= self.scale_up
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
         

@@ -51,7 +51,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 5e3
+    learning_starts: int = 1e3
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -97,20 +97,20 @@ class SoftQNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear((20 + 1) * 2 , 128),
+            nn.Linear((20 + 1) * 2 , 256),
             nn.LeakyReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
             nn.LeakyReLU(),
-            nn.Linear(128, 2)
+            nn.Linear(256, 1)
         )
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.env = env
-        self.M2C_tt = torch.tensor(env.get_attr("M2C_tt")[0], dtype=torch.float32, device=self.device)
+        self.M2C_tt = env.get_attr("M2C_tt")[0]
 
     def forward(self, x, a):
-        x = torch.cat([x, a], 1)
+        x = torch.cat([x, a.unsqueeze(1)], 1)
         x = x.view(x.shape[0], -1)
         x = self.net(x)
         return x
@@ -124,11 +124,11 @@ class Actor(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(20 * 2, 128),
+            nn.Linear(20 * 2, 256),
             nn.LeakyReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
             nn.LeakyReLU(),
-            nn.Linear(128, 64)
+            nn.Linear(256, 64)
         )
 
         self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
