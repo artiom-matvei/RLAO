@@ -19,7 +19,7 @@ class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     #--------------------------Core gym funtions--------------------------------
-    def __init__(self):
+    def __init__(self, f1=1, a1=1e-7, T=5, dt=0.05, d=1, seed=0, freq_multiplier=2/3, amp_multiplier=1.0):
 
         # Load in configuration file
         self.conf_path = 'Conf/papyrus_config.yaml'
@@ -28,6 +28,21 @@ class OOPAO(gym.Env):
             conf = yaml.safe_load(file)
 
         self.args = SimpleNamespace(**conf)
+
+
+        self.f1, self.a1 = f1, a1
+        self.T = T
+        self.dt = dt
+        self.seed = seed
+        self.t = 0
+        self.d = d
+
+        self.freq_multiplier = freq_multiplier  # Controls how fast frequencies increase
+        self.amp_multiplier = amp_multiplier  # Controls amplitude scaling
+
+        self.frequencies = [self.f1 * (self.freq_multiplier ** i) for i in range(self.args.nModes)]
+        self.amplitudes = [self.a1 * (self.amp_multiplier ** i) for i in range(self.args.nModes)]
+
 
         # OOPAO Modules
         self.gainCL = None
@@ -82,7 +97,7 @@ class OOPAO(gym.Env):
         self.network = None
         self.net_gain = 0.5
         self.scale_down = 1e-6
-        self.scale_up = 1e6
+        self.scale_up = 1e7
 
         # Histories
         self.n_history = 5
@@ -115,20 +130,31 @@ class OOPAO(gym.Env):
         self.set_params_file(self.args.param_file,self.args.oopao_path) # set parameter file
         self.set_params(self.args)
 
+        self.xvalid, self.yvalid = np.where(self.tel.pupil == 1)
+
         self.d = self.args.delay
         self.action_buffer = [torch.zeros((self.args.nModes)).to(device=self.device, dtype=torch.float32)] * self.d
-        
 
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
+        self.t = 0
+        self.obs_history.zero_()
+        self.action_buffer = [torch.zeros((self.args.nModes), device=self.device, dtype=torch.float32) for _ in range(self.d)]
+        self.randPhase = 2 * torch.pi * torch.rand(self.args.nModes)
+
         self.current_steps = 0
         self.episode_reward_sum = 0  # Initialize in reset
         
-        self.dm.coefs = 0
-        self.dm_prev = self.dm.coefs.copy()
-        self.atm.generateNewPhaseScreen(seed = np.random.randint(0, 1e5))
+        tt_values = np.zeros((self.args.nModes,))
+        for i in range(self.args.nModes):
+            tt_values[i] = self.amplitudes[i] * np.sin(2 * np.pi * self.frequencies[i] * self.t * self.dt + self.randPhase[i])
+
+
+        tmpOPD = np.zeros_like(self.tel.OPD.copy())
+        tmpOPD[self.xvalid, self.yvalid] = self.M2OPD @ tt_values
+        self.tel.OPD = tmpOPD
         self.tel*self.wfs
 
         self.action_buffer = [torch.zeros((self.args.nModes)).to(device=self.device, dtype=torch.float32)] * self.d
@@ -136,7 +162,7 @@ class OOPAO(gym.Env):
         self.obs_history = torch.zeros((self.n_history, self.args.nModes)).to(self.device)
         # self.action_history = torch.zeros((self.n_history, 21, 21)).to(self.device)
 
-        obs = -torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        obs = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         obs *= self.scale_up
 
         self.obs_history = self.roll_buffer(self.obs_history, obs)
@@ -146,44 +172,35 @@ class OOPAO(gym.Env):
         return self.obs_history.cpu().numpy(), info
     
 
-    def step(self, action): # action, showAtmos = True
-        # Single AO step. Action defines DM shape and function returns WFS
-        # slopes, reward (-1*norm of slopes), done as false (no current condition)
-        # and (currently empty) info dictionary, where one could store useful
-        # data about the simulation
+    def step(self, action):
 
-        self.action_buffer.append(torch.tensor(action).to(device=self.device, dtype=torch.float32))
-    
-        action = self.M2C_tt.cpu().numpy()@self.action_buffer[0].cpu().numpy() * self.scale_down
+        self.t += 1
+        # Convert action to tensor and apply delay
+        action_tensor = torch.tensor(action, device=self.device, dtype=torch.float32)
+        self.action_buffer.append(action_tensor)
+        delayed_action = self.action_buffer.pop(0)
 
-        del self.action_buffer[0]
 
-        # # update phase screens => overwrite tel.OPD and consequently tel.src.phase
-        # self.atm.update()
+        tt_values = np.zeros((self.args.nModes,))
+        for i in range(self.args.nModes):
+            tt_values[i] = self.amplitudes[i] * np.sin(2 * np.pi * self.frequencies[i] * self.t * self.dt + self.randPhase[i])
 
-        # propagate to the WFS with the CL commands applied
 
-        self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action)
-        self.dm_prev = self.dm.coefs.copy()
+        tmpOPD = np.zeros_like(self.tel.OPD.copy())
+        tmpOPD[self.xvalid, self.yvalid] = self.M2OPD @ tt_values
+        self.tel.OPD = tmpOPD
+        self.tel*self.wfs
         
-
-        self.tel*self.dm*self.wfs
-
-     
-        # store the slopes after computing the commands => 2 frames delay
-        
-        self.wfsSignal=self.wfs.signal
-        
-        slopes = self.wfsSignal 
-        obs = -torch.tensor(np.matmul(self.reconstructor_tt,slopes), dtype=torch.float32).to(self.device)
+ 
+        obs = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         obs *= self.scale_up
 
-        self.obs_history = self.roll_buffer(self.obs_history, obs)
-        
-        self.OPD=self.tel.OPD[np.where(self.tel.pupil>0)]
-      
-        # Save Strehl ratio to calculate Episode Average
-        
+        self.obs_history = torch.roll(self.obs_history, shifts=1, dims=0)
+        for i in range(self.args.nModes):
+            self.obs_history[0, i] = obs[i]
+
+
+
         strehl = self.get_strehl()
         self.SR.append(strehl)
 
@@ -192,14 +209,13 @@ class OOPAO(gym.Env):
         done = self.current_steps >= self.args.nLoop
         truncated = done
        
-        # Extra
+        diff = delayed_action - self.obs_history[0]
 
-        # reward = -1 * np.linalg.norm(obs.cpu().numpy())
-        # For now we will use the Strehl ratio as the reward
-        # reward = strehl
-        reward = - np.linalg.norm(obs.cpu())**2
+        reward = -np.linalg.norm(diff.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
+        reward = np.clip(reward, -1, 1)
 
-        info = {"strehl":strehl}
+
+        info = {"strehl":strehl, "tt_values":tt_values}
         terminated = 0
 
             # If episode is ending, add the final_info with episode statistics
@@ -207,7 +223,6 @@ class OOPAO(gym.Env):
             # info["final_observation"] = self.obs_history.cpu().numpy()
             self.current_steps = 0
 
-        self.atm.update()
 
         return self.obs_history.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
@@ -387,6 +402,7 @@ class OOPAO(gym.Env):
 
         M2C_zernike = np.load(os.path.dirname(__file__)+'/manual_m2c.npy')[:, :50]
 
+        self.M2OPD = np.load(os.path.dirname(__file__)+'/../wf_recon/M2OPD_500modes.npy')[:, :self.args.nModes]
         #%% -----------------------     Calibration: Interaction Matrix  ----------------------------------
 
         # amplitude of the modes in m
@@ -474,8 +490,6 @@ class OOPAO(gym.Env):
         self.LE_PSF = np.log10(self.tel.PSF)
         self.LE_PSFs = []
 
-        self.wfs.cam.photonNoise     = True
-        self.display                 = True
         self.reconstructor = M2C_CL@calib_CL.M
         self.modal_CM = calib_CL.M
         self.F = M2C_CL @ np.linalg.pinv(M2C_CL)

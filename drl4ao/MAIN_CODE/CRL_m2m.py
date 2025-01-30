@@ -16,7 +16,7 @@ import torch.optim as optim
 import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
-from OOPAOEnv.modalAOEnv import OOPAO
+from OOPAOEnv.modalAOSinEnv import OOPAO
 
 #%%
 @dataclass
@@ -43,11 +43,13 @@ class Args:
     """the environment id of the task"""
     total_timesteps: int = 50000#1000000
     """total timesteps of the experiments"""
+    num_envs: int = 1
+    """the number of parallel game environments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 0.005
+    tau: float = 0.01
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
@@ -55,15 +57,15 @@ class Args:
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 1e-4#1e-3
+    q_lr: float = 1e-5#1e-3
     """the learning rate of the Q network network optimizer"""
     policy_frequency: int = 2
     """the frequency of training policy (delayed)"""
-    target_network_frequency: int = 2#1  # Denis Yarats' implementation delays this by 2.
+    target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.01
+    alpha: float = 0.025
     """Entropy regularization coefficient."""
-    autotune: bool = True
+    autotune: bool = False
     """automatic tuning of the entropy coefficient"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
@@ -96,18 +98,20 @@ def make_env():
 class SoftQNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear((20 + 1) * 2 , 256),
-            nn.LeakyReLU(),
-            nn.Linear(256, 256),
-            nn.LeakyReLU(),
-            nn.Linear(256, 1)
-        )
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         self.env = env
-        self.M2C_tt = env.get_attr("M2C_tt")[0]
+
+        self.T = self.env.get_attr("n_history")[0]
+
+        self.net = nn.Sequential(
+            nn.Linear((self.T + 1) * 2 , 256*2),
+            nn.LeakyReLU(),
+            nn.Linear(256*2, 256*2),
+            nn.LeakyReLU(),
+            nn.Linear(256*2, 1)
+        )
+
 
     def forward(self, x, a):
         x = torch.cat([x, a.unsqueeze(1)], 1)
@@ -123,30 +127,34 @@ LOG_STD_MIN = -5
 class Actor(nn.Module):
     def __init__(self, env):
         super().__init__()
+
+        self.env = env
+        self.T = self.env.get_attr("n_history")[0]
+
         self.net = nn.Sequential(
-            nn.Linear(20, 256),
+            nn.Linear(self.T, 256*2),
             nn.LeakyReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(256*2, 256*2),
             nn.LeakyReLU(),
-            nn.Linear(256, 64)
+            nn.Linear(256*2, 64)
         )
         self.mode_processors = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(20, 256),  # Process temporal info for each mode
+                nn.Linear(self.T, 256*2),  # Process temporal info for each mode
                 nn.ReLU(),
-                nn.Linear(256, 256),
+                nn.Linear(256*2, 256*2),
                 nn.ReLU()
             ) for _ in range(2)
         ])
 
         self.fc_mean = nn.Sequential(
-            nn.Linear(2 * 256, 128),
+            nn.Linear(2 * 256*2, 128),
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
 
         self.fc_logstd = nn.Sequential(
-            nn.Linear(2 * 256, 128),
+            nn.Linear(2 * 256*2, 128),
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
@@ -156,10 +164,10 @@ class Actor(nn.Module):
         # self.fc_logstd = nn.Linear(64, np.prod(env.single_action_space.shape))
         # action rescaling
         self.register_buffer(
-            "action_scale", torch.tensor((env.action_space.high - env.action_space.low) / 2.0, dtype=torch.float32)
+            "action_scale", torch.tensor((env.single_action_space.high - env.single_action_space.low) / 2.0, dtype=torch.float32)
         )
         self.register_buffer(
-            "action_bias", torch.tensor((env.action_space.high + env.action_space.low) / 2.0, dtype=torch.float32)
+            "action_bias", torch.tensor((env.single_action_space.high + env.single_action_space.low) / 2.0, dtype=torch.float32)
         )
 
     def forward(self, x):
@@ -181,8 +189,8 @@ class Actor(nn.Module):
         mean, log_std = self(x)
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
-        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
-        y_t = torch.tanh(x_t)
+        x_t = normal.rsample()
+        y_t = torch.tanh(x_t) # for reparameterization trick (mean + std * N(0,1))
         action = y_t * self.action_scale + self.action_bias
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
@@ -231,7 +239,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    envs = gym.vector.SyncVectorEnv([make_env()])
+    envs = gym.vector.SyncVectorEnv(
+        [make_env() for i in range(args.num_envs)]
+    )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_action = float(envs.single_action_space.high[0])
@@ -262,6 +272,7 @@ if __name__ == "__main__":
         envs.single_observation_space,
         envs.single_action_space,
         device,
+        n_envs=args.num_envs,
         handle_timeout_termination=False,
     )
     start_time = time.time()
