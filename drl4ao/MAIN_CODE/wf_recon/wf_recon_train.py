@@ -42,7 +42,7 @@ savedir = os.path.dirname(__file__)
 env = get_env(args)
 
 
-with open("unmod_train.txt", "a") as f:
+with open("quick_test.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -133,7 +133,7 @@ D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape
 D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=300000)
 D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=300000)
 
-with open("unmod_train.txt", "a") as f:  # 'a' mode appends to the file
+with open("quick_test.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
@@ -144,7 +144,7 @@ checkpoint = torch.load(savedir+'/models/useable/unmod.pt',map_location=device)
 # Make sure to use the correct network before loading the state dict
 reconstructor = Unet_big(env.xvalid,env.yvalid)
 # Restore the regular model and optimizer state
-reconstructor.load_state_dict(checkpoint['model_state_dict'])
+# reconstructor.load_state_dict(checkpoint['model_state_dict'])
 
 # reconstructor = Unet_big(env.xvalid, env.yvalid)
 # reconstructor = reconstructor.to(device)
@@ -188,7 +188,7 @@ weight_matrix = weight_matrix.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, height,
 # weight_matrix = weight_matrix.expand(batch_size, channels, height, width)
 
 
-with open("unmod_train.txt", "a") as f:  # 'a' mode appends to the file
+with open("quick_test.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
@@ -235,7 +235,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("unmod_train.txt", "a") as f:  # 'a' mode appends to the file
+    with open("quick_test.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -274,7 +274,7 @@ for epoch in range(n_epochs):
     # avg_ema_val_loss = ema_val_loss/len(val_loader)
     # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("unmod_train.txt", "a") as f:  # 'a' mode appends to the file
+    with open("quick_test.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -291,13 +291,13 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("unmod_train.txt", "a") as f:  # 'a' mode appends to the file
+    with open("quick_test.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_unmod', train_losses)
-    np.save(savedir+'/losses/val_loss_unmod', val_losses)
+    np.save(savedir+'/losses/train_loss_quicktest', train_losses)
+    np.save(savedir+'/losses/val_loss_quicktest', val_losses)
     # np.save(savedir+'/losses/ema_val_loss_ema_big_dataset', ema_val_losses)
 
 # Test phase (after all epochs)
@@ -321,8 +321,6 @@ avg_test_loss = test_loss / len(test_loader)
 print(f"Test Loss: {avg_test_loss}")
 
 
-np.save(savedir+'/losses/train_loss_unmod', train_losses)
-np.save(savedir+'/losses/val_loss_unmod', val_losses)
 # np.save(savedir+'/losses/ema_val_loss_papyrus_unet_big_200k', ema_val_losses)
 # torch.save(reconstructor.state_dict(), savedir+'/models/last_papyrus_unet_big_200k.pt')
 
