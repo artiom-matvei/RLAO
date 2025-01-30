@@ -17,6 +17,7 @@ gainCL: 0.5
 gain_list: [0.5]
 frames_per_sec: 500
 delay: 0
+nModes: 2
 
 initial_sigma: 0.2
 iters: 100

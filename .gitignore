@@ -17,6 +17,10 @@ saved_filters/
 
 losses/
 datasets/
+runs/
+FSO/
+cleanrl/
+compZern.py
 
 .DS_Store
 drl4ao/.DS_Store
