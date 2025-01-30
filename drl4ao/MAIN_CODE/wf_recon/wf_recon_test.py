@@ -121,7 +121,7 @@ for i in range(3):
 #     reconstructor = load_model(savedir+'/best_model_OL.pt')
 
 # except:
-checkpoint = torch.load(savedir+'/models/tmp/unmod.pt',map_location=device)
+checkpoint = torch.load(savedir+'/models/tmp/unmod_ft.pt',map_location=device)
 
 
 # Make sure to use the correct network before loading the state dict
@@ -198,7 +198,7 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'unmod'
+tag = 'quicktest'
 
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')

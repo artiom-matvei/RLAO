@@ -5,7 +5,7 @@
 #SBATCH --mem=40G                        # memory per node
 #SBATCH --time=00-00:59         # time (DD-HH:MM)
 #SBATCH --account=def-lplevass
-#SBATCH --job-name=unmodulated
+#SBATCH --job-name=quick_test
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=parker.levesque@gmail.com
 
