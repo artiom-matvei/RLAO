@@ -51,7 +51,7 @@ for j in range(size):
     wfs_frames[j] = np.float32(env.wfs.cam.frame.copy())
 
     # Zernike Modes of Phase
-    phase = env.tel.opd.copy()
+    phase = env.tel.OPD.copy()
     modes = opd2m@phase[xpupil, ypupil]
 
     # Save nModes controllable modes on DM as Grount Truth Commands
