@@ -38,7 +38,7 @@ class MultiSinEnv(gym.Env):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.obsHistory = torch.zeros((T, n))
+        self.obsHistory = torch.zeros((T, n)).to(self.device)
         self.action_buffer = [torch.zeros((self.n), device=self.device, dtype=torch.float32) for _ in range(self.d)]
         self.reset()
 
@@ -62,7 +62,7 @@ class MultiSinEnv(gym.Env):
         # Generate initial history
         t_vals = torch.arange(self.T, device=self.device) * self.dt
         for i in range(self.n):
-            self.obsHistory[:, i] = self.amplitudes[i] * torch.sin(2 * torch.pi * self.frequencies[i] * t_vals + self.randPhase[i])
+            self.obsHistory[:, i] = self.amplitudes[i] * torch.sin(2 * torch.pi * self.frequencies[i] * t_vals + self.randPhase[i]).to(self.device)
 
         info = {}
 
@@ -81,7 +81,7 @@ class MultiSinEnv(gym.Env):
         
         # Generate new observation values for each sine wave
         for i in range(self.n):
-            self.obsHistory[0, i] = self.amplitudes[i] * torch.sin(2 * torch.pi * self.frequencies[i] * self.t * self.dt + self.randPhase[i])
+            self.obsHistory[0, i] = self.amplitudes[i] * torch.sin(2 * torch.pi * self.frequencies[i] * self.t * self.dt + self.randPhase[i]).to(self.device)
         
         
         diff = self.applyActionScale * delayed_action - self.obsHistory[0]
