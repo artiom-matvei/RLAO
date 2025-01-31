@@ -97,9 +97,10 @@ class MultiSinEnv(gym.Env):
         info = {}
 
         done = self.t >= self.epLen
+        truncated = done
 
         if done:
-            terminated = True
+            self.t = self.T
 
-        return self.obsHistory.cpu().numpy(), reward, terminated, truncated, info
+        return self.obsHistory.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
