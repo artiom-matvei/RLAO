@@ -304,7 +304,7 @@ def objective(trial):
                 reward_val = info["episode"]["r"]
                 trial.report(reward_val, global_step)
 
-                if trial.should_prune():
+                if trial.should_prune() and global_step > args.learning_starts:
                     raise optuna.exceptions.TrialPruned()
                 
                 break
