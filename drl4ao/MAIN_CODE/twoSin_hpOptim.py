@@ -398,9 +398,9 @@ def objective(trial):
 if __name__ == "__main__":
     
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100, timeout=3600)
+    study.optimize(objective, n_trials=500, timeout=12*3600)
 
-    pruned_trials = study.get_trials(deepcopy=False, states=[optuna.tiral.TrialState.PRUNED])
+    pruned_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.COMPLETE])
 
     print("Study statistics: ")
