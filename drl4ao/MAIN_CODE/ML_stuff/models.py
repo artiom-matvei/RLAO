@@ -232,8 +232,11 @@ class Unet_big(nn.Module):
 
         return x_out
     
-    def count_parameters(model):
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+    
+    def count_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
 
 def create_edge_weight_matrix(height, width, center, radius, sigma):
