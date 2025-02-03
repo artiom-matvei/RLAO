@@ -198,7 +198,7 @@ plt.show()
 plt.style.use('ggplot')
 
 # plot losses
-tag = 'quicktest'
+tag = 'thesis_retrain_atm'
 
 loss_dir = savedir+ '/losses'
 train_loss = np.load(loss_dir+ '/train_loss_' + tag + '.npy')
