@@ -27,7 +27,7 @@ drl4ao/.DS_Store
 drl4ao/MAIN_CODE/.DS_Store
 
 inputs/
-targets/
+targets/+
 
 data_cl/
 env_var.sh
