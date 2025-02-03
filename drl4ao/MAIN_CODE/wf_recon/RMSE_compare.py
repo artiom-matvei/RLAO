@@ -151,7 +151,7 @@ plt.boxplot([rmse_lin,rmse_net_filt, rmse_net_full], labels=['Linear', "Network 
 plt.ylabel("RMSE")
 plt.title("RMS Reconstruction Error")
 plt.grid(axis='y', linestyle='--', alpha=0.7)
-plt.yscale('log')
+# plt.yscale('log')
 
 plt.show()
 
