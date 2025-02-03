@@ -123,7 +123,7 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames.npy'
+input_file_path = data_dir_path+'/wfs_frames_atm.npy'
 target_file_path = data_dir_path+'/dm_cmds.npy'
 
 dm_shape = env.dm.coefs.shape
