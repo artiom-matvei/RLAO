@@ -31,6 +31,7 @@ targets/
 
 data_cl/
 env_var.sh
+reconstruct.sh
 # Job files
 *.sh
 *.out
