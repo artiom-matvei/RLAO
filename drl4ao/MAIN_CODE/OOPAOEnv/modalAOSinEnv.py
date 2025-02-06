@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-OOPAO module for the Reinforcement learning structure (also used for the integrator)
-@author: Raissa Camelo (LAM) git: @srtacamelo
-@author: cheritier (OOPAO Pyramid_WFS closed loop tutorial )
+Same as twoSin except that the sin waves are given
+as modal coeffs to the OPD, then measured by the WFS
+and reconstructed into modal coefs for the DM.
 """
 
 from .__load__oopao import load_oopao

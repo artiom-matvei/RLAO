@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-OOPAO module for the Reinforcement learning structure (also used for the integrator)
-@author: Raissa Camelo (LAM) git: @srtacamelo
-@author: cheritier (OOPAO Pyramid_WFS closed loop tutorial )
+Base OOPAO Env.
+Action space and observation space are in actuator space.
+Note that this env is not compliant with SB3 nor Clean RL format
 """
 
 from .__load__oopao import load_oopao

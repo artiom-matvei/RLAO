@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-OOPAO module for the Reinforcement learning structure (also used for the integrator)
-@author: Raissa Camelo (LAM) git: @srtacamelo
-@author: cheritier (OOPAO Pyramid_WFS closed loop tutorial )
+Regular OOPAO Env but Input and Output are in 
+modal space.
 """
 
 from .__load__oopao import load_oopao
