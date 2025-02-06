@@ -126,6 +126,7 @@ class MultiAtmEnv(gym.Env):
 
         # Env Dynamics
         self.applyActionScale = 1.0
+        self.scaleObs = 1e6
 
 
         # Env Spaces
@@ -159,7 +160,7 @@ class MultiAtmEnv(gym.Env):
 
         self.obsHistory = torch.roll(self.obsHistory, shifts=1, dims=0)
         for i in range(self.n):
-            self.obsHistory[0, i] = modes[i]
+            self.obsHistory[0, i] = modes[i] * self.scaleObs
 
         info = {}
 
@@ -180,7 +181,7 @@ class MultiAtmEnv(gym.Env):
         modes = self.opd2m @ self.env.tel.OPD.copy()[self.xpupil, self.ypupil]
         # Generate new observation values for each sine wave
         for i in range(self.n):
-            self.obsHistory[0, i] = modes[i]
+            self.obsHistory[0, i] = modes[i] * self.scaleObs
         
         diff = self.applyActionScale * delayed_action - self.obsHistory[0]
 
