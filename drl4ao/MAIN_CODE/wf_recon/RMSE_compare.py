@@ -1,15 +1,12 @@
 #%%
 import os,sys
 import torch
-import torch.optim as optim
-import torch.nn as nn
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import time
 import numpy as np
-# from PO4AO.mbrl_funcsRAZOR import get_env
 from PO4AO.mbrl import get_env
 from ML_stuff.dataset_tools import ImageDataset, FileDataset, make_diverse_dataset, read_yaml_file
 from ML_stuff.models import Reconstructor, Reconstructor_2, build_unet, Unet_big
