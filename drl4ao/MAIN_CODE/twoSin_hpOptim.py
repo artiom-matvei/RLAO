@@ -16,9 +16,21 @@ import torch.optim as optim
 import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
-from OOPAOEnv.SinEnv import MultiSinEnv
 import optuna
+from OOPAOEnv.SinEnv import MultiAtmEnv
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from ML_stuff.dataset_tools import read_yaml_file
+from types import SimpleNamespace
+from PO4AO.mbrl import get_env
+try:
+    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
+except:
+    args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
+
+envOOPAO = get_env(args)
+m2opd = np.load(os.path.dirname(__file__)+'/wf_recon/M2OPD_500modes.npy')
 #%%
 @dataclass
 class Args:
@@ -76,7 +88,7 @@ class Args:
 
 def make_env():
     def thunk():
-        env = MultiSinEnv(n=2)
+        env = MultiAtmEnv(env=envOOPAO, m2opd=m2opd, n=2)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
     return thunk
@@ -216,6 +228,7 @@ def objective(trial):
     args.target_network_frequency = trial.suggest_int("target_network_frequency", 1, 10)
     args.alpha = trial.suggest_float("alpha", 0.01, 0.1)
     args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
+    args.exp_name = "optuna_atm_tt"
 
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:

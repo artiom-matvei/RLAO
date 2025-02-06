@@ -63,12 +63,13 @@ def plot_tensorboard_scalars(logdir):
    # Convert to sorted lists for plotting
     steps = sorted(aggregated_data.keys())
     means = np.array([np.mean(aggregated_data[step]) for step in steps])
-    stds = np.array([np.std(aggregated_data[step]) for step in steps])
+    maxs = np.array([np.max(aggregated_data[step]) for step in steps])
+    mins = np.array([np.min(aggregated_data[step]) for step in steps])
 
     # Plot mean with shaded error region
     plt.figure(figsize=(10, 6))
     plt.plot(steps, means, label="Mean Return", color='b')
-    plt.fill_between(steps, means - stds, means + stds, alpha=0.3, color='b', label="±1 Std Dev")
+    plt.fill_between(steps, mins, maxs, alpha=0.3, color='b', label="Min / Max")
 
     plt.xlabel("Steps")
     plt.ylabel("Return")
