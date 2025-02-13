@@ -116,5 +116,8 @@ torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
 print("Data Saved")
 
 
-# You should try to adjust certain parameters like the gainCL
-# To see how it affects performance / stability
+# Possible exercises:
+# - Adjust certain parameters like the gainCL to see how it affects performance / stability
+# - Optimize the gainCL to maximize the Strehl Ratio
+# - Animate the PSF over time (use env.tel.computePSF(n) and then env.tel.PSF to get PSF image [Experiment with n values])
+# - Look into the env code to find the DM geometry and then visualize the DM shape over time (Hint: Look at the vec_to_img function in OOPAOEnv.py)
