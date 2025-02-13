@@ -127,12 +127,13 @@ LOG_STD_MIN = -5
 
 
 class Actor(nn.Module):
-    def __init__(self, env):
+    def __init__(self, env, hidden_dim=256):
         super().__init__()
 
         self.env = env
         self.T = self.env.get_attr("n_history")[0] + 1
         self.n = self.env.get_attr("n")[0]
+        self.hidden_dim = hidden_dim
 
         self.net = nn.Sequential(
             nn.Linear(self.T, self.hidden_dim),
