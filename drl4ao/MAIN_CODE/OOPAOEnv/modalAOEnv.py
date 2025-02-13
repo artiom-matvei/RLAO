@@ -145,22 +145,13 @@ class OOPAO(gym.Env):
         return self.obs_history.cpu().numpy(), info
     
 
-    def step(self, action): # action, showAtmos = True
-        # Single AO step. Action defines DM shape and function returns WFS
-        # slopes, reward (-1*norm of slopes), done as false (no current condition)
-        # and (currently empty) info dictionary, where one could store useful
-        # data about the simulation
+    def step(self, action):
 
         self.action_buffer.append(torch.tensor(action).to(device=self.device, dtype=torch.float32))
     
         action = self.M2C_tt.cpu().numpy()@self.action_buffer[0].cpu().numpy() * self.scale_down
 
         del self.action_buffer[0]
-
-        # # update phase screens => overwrite tel.OPD and consequently tel.src.phase
-        # self.atm.update()
-
-        # propagate to the WFS with the CL commands applied
 
         self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action)
         self.dm_prev = self.dm.coefs.copy()

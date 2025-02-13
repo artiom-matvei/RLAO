@@ -101,8 +101,7 @@ class SoftQNetwork(nn.Module):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
-
-        self.T = self.env.get_attr("n_history")[0]
+        self.T = self.env.get_attr("n_history")[0] + 1
 
         self.net = nn.Sequential(
             nn.Linear((self.T + 1) * 2 , 256*2),
@@ -110,8 +109,7 @@ class SoftQNetwork(nn.Module):
             nn.Linear(256*2, 256*2),
             nn.LeakyReLU(),
             nn.Linear(256*2, 1)
-        )
-
+        ) 
 
     def forward(self, x, a):
         x = torch.cat([x, a.unsqueeze(1)], 1)
@@ -129,7 +127,7 @@ class Actor(nn.Module):
         super().__init__()
 
         self.env = env
-        self.T = self.env.get_attr("n_history")[0]
+        self.T = self.env.get_attr("n_history")[0] + 1
 
         self.net = nn.Sequential(
             nn.Linear(self.T, 256*2),
