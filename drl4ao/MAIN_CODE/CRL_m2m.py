@@ -39,7 +39,7 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "OOPAO-v0"
+    env_id: str = "CL_OOPAO-v0"
     """the environment id of the task"""
     total_timesteps: int = 50000#1000000
     """total timesteps of the experiments"""
@@ -69,6 +69,7 @@ class Args:
     """automatic tuning of the entropy coefficient"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
+    hiddem_dim: int = 256
 
 
 # def make_env(env_id, seed, idx, capture_video, run_name):
@@ -96,19 +97,22 @@ def make_env():
 
 # ALGO LOGIC: initialize agent here:
 class SoftQNetwork(nn.Module):
-    def __init__(self, env):
+    def __init__(self, env, hidden_dim=256):
         super().__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
         self.T = self.env.get_attr("n_history")[0] + 1
+        self.n = self.env.get_attr("n")[0]
+
+        self.hidden_dim = hidden_dim
 
         self.net = nn.Sequential(
-            nn.Linear((self.T + 1) * 2 , 256*2),
+            nn.Linear((self.T + 1) * self.n , self.hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(256*2, 256*2),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(256*2, 1)
+            nn.Linear(self.hidden_dim, 1)
         ) 
 
     def forward(self, x, a):
@@ -128,31 +132,32 @@ class Actor(nn.Module):
 
         self.env = env
         self.T = self.env.get_attr("n_history")[0] + 1
+        self.n = self.env.get_attr("n")[0]
 
         self.net = nn.Sequential(
-            nn.Linear(self.T, 256*2),
+            nn.Linear(self.T, self.hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(256*2, 256*2),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(256*2, 64)
+            nn.Linear(self.hidden_dim, 64)
         )
         self.mode_processors = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(self.T, 256*2),  # Process temporal info for each mode
+                nn.Linear(self.T, self.hidden_dim),  # Process temporal info for each mode
                 nn.ReLU(),
-                nn.Linear(256*2, 256*2),
+                nn.Linear(self.hidden_dim, self.hidden_dim),
                 nn.ReLU()
-            ) for _ in range(2)
+            ) for _ in range(self.n)
         ])
 
         self.fc_mean = nn.Sequential(
-            nn.Linear(2 * 256*2, 128),
+            nn.Linear(self.n * self.hidden_dim, 128),
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
 
         self.fc_logstd = nn.Sequential(
-            nn.Linear(2 * 256*2, 128),
+            nn.Linear(self.n * self.hidden_dim, 128),
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )

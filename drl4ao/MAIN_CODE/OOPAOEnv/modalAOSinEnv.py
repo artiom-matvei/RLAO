@@ -36,6 +36,7 @@ class OOPAO(gym.Env):
         self.seed = seed
         self.t = 0
         self.d = d
+        self.n = self.args.nModes
 
         self.freq_multiplier = freq_multiplier  # Controls how fast frequencies increase
         self.amp_multiplier = amp_multiplier  # Controls amplitude scaling

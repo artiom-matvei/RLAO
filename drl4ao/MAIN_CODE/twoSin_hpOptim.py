@@ -17,20 +17,10 @@ import tyro
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 import optuna
-from OOPAOEnv.SinEnv import MultiAtmEnv
+from OOPAOEnv.modalAOSinEnv import OOPAO
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ML_stuff.dataset_tools import read_yaml_file
-from types import SimpleNamespace
-from PO4AO.mbrl import get_env
-try:
-    args = SimpleNamespace(**read_yaml_file('./Conf/papyrus_config.yaml'))
-except:
-    args = SimpleNamespace(**read_yaml_file('../Conf/papyrus_config.yaml'))
-
-envOOPAO = get_env(args)
-m2opd = np.load(os.path.dirname(__file__)+'/wf_recon/M2OPD_500modes.npy')
 #%%
 @dataclass
 class Args:
@@ -52,7 +42,7 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "OOPAO-v0"
+    env_id: str = "CL_OOPAO-v0"
     """the environment id of the task"""
     total_timesteps: int = 50000#1000000
     """total timesteps of the experiments"""
@@ -85,10 +75,9 @@ class Args:
     hidden_dim: int = 256
 
 
-
 def make_env():
     def thunk():
-        env = MultiAtmEnv(env=envOOPAO, m2opd=m2opd, n=2)
+        env = OOPAO()
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
     return thunk
@@ -102,7 +91,7 @@ class SoftQNetwork(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
 
-        self.T = self.env.get_attr("T")[0]
+        self.T = self.env.get_attr("T")[0] + 1
         self.n = self.env.get_attr("n")[0]
 
         self.hidden_dim = hidden_dim
@@ -132,7 +121,7 @@ class Actor(nn.Module):
         super().__init__()
 
         self.env = env
-        self.T = self.env.get_attr("T")[0]
+        self.T = self.env.get_attr("T")[0] + 1
         self.n = self.env.get_attr("n")[0]
 
         self.hidden_dim = hidden_dim
@@ -218,17 +207,17 @@ def objective(trial):
         )
 
     args = tyro.cli(Args, args=[])
-    args.gamma = trial.suggest_float("gamma", 0.9, 0.999)
-    args.tau = trial.suggest_float("tau", 0.001, 0.1)
+    args.gamma = trial.suggest_float("gamma", 0.7, 0.999)
+    args.tau = trial.suggest_float("tau", 0.001, 0.1, log=True)
     args.batch_size = trial.suggest_int("batch_size", 32, 256)
     args.learning_starts = trial.suggest_int("learning_starts", 1000, 10000)
-    args.policy_lr = trial.suggest_float("policy_lr", 1e-5, 1e-3)
-    args.q_lr = trial.suggest_float("q_lr", 1e-5, 1e-3)
+    args.policy_lr = trial.suggest_float("policy_lr", 1e-5, 1e-3, log=True)
+    args.q_lr = trial.suggest_float("q_lr", 1e-5, 1e-3, log=True)
     args.policy_frequency = trial.suggest_int("policy_frequency", 1, 10)
     args.target_network_frequency = trial.suggest_int("target_network_frequency", 1, 10)
-    args.alpha = trial.suggest_float("alpha", 0.01, 0.1)
+    args.alpha = trial.suggest_float("alpha", 0.01, 0.1, log=True)
     args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
-    args.exp_name = "optuna_atm_tt"
+    args.exp_name = "optuna_CL_TT"
 
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
@@ -411,7 +400,7 @@ def objective(trial):
 if __name__ == "__main__":
     
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=500, timeout=12*3600)
+    study.optimize(objective, n_trials=800, timeout=12*3600)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.COMPLETE])
