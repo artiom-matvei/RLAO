@@ -51,10 +51,10 @@ env.tel*env.dm*env.wfs
 LE_PSFs= []
 SE_PSFs = []
 SRs = []
+SR_500 = []
 SR_std = []
 accu_reward = 0
 LE_SR = []
-reset_counter = 0
 
 # Here we start the control loop
 for i in range(args.nLoop):
@@ -90,6 +90,7 @@ for i in range(args.nLoop):
 
     # This is one way to compute the strehl but dont worry about the math
     strehl = np.exp(-np.var(env.tel.src.phase[np.where(env.tel.pupil==1)]))
+    SR_500.append(strehl)
 
     # Update the atmosphere for the next iteration
     env.atm.update()
@@ -97,17 +98,15 @@ for i in range(args.nLoop):
     b= time.time()
     print('Elapsed time: ' + str(b-a) +' s')
 
-    print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL)+' Turbulence: '+str(env.total[i])+' -- Residual:' +str(env.residual[i])+ '\n')
-    print("SR: " +str(strehl))
+    print('Loop '+str(i+1)+'/'+str(args.nLoop)+' Gain: '+str(env.gainCL))
+    print("SR: " +str(strehl) + "\n")
 
     # Here's an example of me wanting to compute some metrics
-    # I wanted to save the average strehl and std over many frames  
+    # I wanted to save the average strehl over many frames  
     if (i+1) % 500 == 0:
-        sr, std = env.calculate_strehl_AVG()
-        SRs.append(sr)
-        SR_std.append(std)
-        print(sr)
-
+        SRs.append(np.mean(SR_500))
+        SR_std.append(np.std(SR_500))
+        SR_500 = []
 
 
 # Save the data if you want
@@ -116,3 +115,6 @@ torch.save(SRs, os.path.join(savedir, "sr2plot.pt"))
 torch.save(SR_std, os.path.join(savedir, "srstd2plot.pt"))
 print("Data Saved")
 
+
+# You should try to adjust certain parameters like the gainCL
+# To see how it affects performance / stability
