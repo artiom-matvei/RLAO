@@ -109,7 +109,7 @@ class OOPAO(gym.Env):
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(self.n_history, self.args.nModes),
+            shape=(self.n_history + 1, self.args.nModes),
             dtype=np.float32
             )
         
