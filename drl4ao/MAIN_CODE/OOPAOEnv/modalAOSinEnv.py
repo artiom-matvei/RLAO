@@ -19,7 +19,7 @@ class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     #--------------------------Core gym funtions--------------------------------
-    def __init__(self, f1=1, a1=1e-7, T=5, dt=0.05, d=1, seed=0, freq_multiplier=2/3, amp_multiplier=1.0):
+    def __init__(self, T=5, d=1, seed=0):
 
         # Load in configuration file
         self.conf_path = 'Conf/papyrus_config.yaml'
@@ -29,20 +29,11 @@ class OOPAO(gym.Env):
 
         self.args = SimpleNamespace(**conf)
 
-
-        self.f1, self.a1 = f1, a1
         self.T = T
-        self.dt = dt
         self.seed = seed
         self.t = 0
         self.d = d
         self.n = self.args.nModes
-
-        self.freq_multiplier = freq_multiplier  # Controls how fast frequencies increase
-        self.amp_multiplier = amp_multiplier  # Controls amplitude scaling
-
-        self.frequencies = [self.f1 * (self.freq_multiplier ** i) for i in range(self.args.nModes)]
-        self.amplitudes = [self.a1 * (self.amp_multiplier ** i) for i in range(self.args.nModes)]
 
 
         # OOPAO Modules
@@ -151,7 +142,7 @@ class OOPAO(gym.Env):
         self.atm.generateNewPhaseScreen(seed = np.random.randint(1e9))
         self.tel*self.wfs
 
-        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        slopes = -1 * torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         slopes *= self.scale_up
 
         obs = torch.cat((slopes.unsqueeze(0), self.obs_history), 0)
@@ -169,7 +160,6 @@ class OOPAO(gym.Env):
         self.action_buffer.append(action_tensor)
         delayed_action = self.action_buffer.pop(0)
 
-
         action4DM = self.M2C_tt.cpu().numpy() @ delayed_action.cpu().numpy() * self.scale_down
 
         self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action4DM) * self.gainCL
@@ -179,8 +169,7 @@ class OOPAO(gym.Env):
         self.tel*self.dm*self.wfs
         self.tel*self.wfs
 
-        
-        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        slopes = -1 * torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         slopes *= self.scale_up
 
         self.obs_history = torch.roll(self.obs_history, shifts=1, dims=0)
@@ -197,10 +186,8 @@ class OOPAO(gym.Env):
         done = self.current_steps >= self.args.nLoop
         truncated = done
        
-
         reward = -np.linalg.norm(slopes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
         reward = np.clip(reward, -1, 1)
-
 
         info = {"strehl":strehl}
         terminated = 0
