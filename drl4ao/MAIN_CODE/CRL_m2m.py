@@ -47,23 +47,23 @@ class Args:
     """the number of parallel game environments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
-    gamma: float = 0.99
+    gamma: float = 0.9
     """the discount factor gamma"""
-    tau: float = 0.01
+    tau: float = 0.00385
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
     learning_starts: int = 1e3
     """timestep to start learning"""
-    policy_lr: float = 3e-4
+    policy_lr: float = 0.000383
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 1e-5#1e-3
+    q_lr: float = 0.00088
     """the learning rate of the Q network network optimizer"""
     policy_frequency: int = 2
     """the frequency of training policy (delayed)"""
-    target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
+    target_network_frequency: int = 3  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.025
+    alpha: float = 0.01
     """Entropy regularization coefficient."""
     autotune: bool = False
     """automatic tuning of the entropy coefficient"""
@@ -215,6 +215,8 @@ if __name__ == "__main__":
         )
 
     num_runs = 10
+    envs = gym.vector.SyncVectorEnv([make_env()])
+    
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
@@ -249,7 +251,6 @@ if __name__ == "__main__":
         device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
         # env setup
-        envs = gym.vector.SyncVectorEnv([make_env()])
         assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
         max_action = float(envs.single_action_space.high[0])

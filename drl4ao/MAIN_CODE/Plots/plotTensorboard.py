@@ -48,7 +48,7 @@ def plot_tensorboard_scalars(logdir):
     aggregated_data = {}
 
     for exp_name, tags in scalar_data.items():
-        if "Multi" not in exp_name:
+        if "CL_OOPAO" not in exp_name and "m2m" not in exp_name:
             continue  # Only process experiments containing "Multi"
         
         for tag, data in tags.items():
