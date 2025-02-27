@@ -13,6 +13,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 lr = np.load(f'{script_dir}/images/lr.npy')
 hr = np.load(f'{script_dir}/images/hr.npy')
 
+zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')
+
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
 B = 100
@@ -38,6 +40,7 @@ with torch.no_grad():
 
     for i, t in enumerate(np.linspace(t_start, 0, num_steps)):
         print(f'Step {i}/{num_steps}')
+
         t = torch.tensor(t).to(device) * torch.ones(B).to(device)
         z = torch.randn_like(x_t).to(device)
         dw = abs(dt)**(1/2) * z
@@ -45,7 +48,19 @@ with torch.no_grad():
 
         sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
 
-        score_likelihood = (y - x_t) / (sig_t ** 2 + eta**2)
+        # transform x_t and y to zernike space
+
+            # chop x_t and y into quadrants (and trim the edges)
+            # mask the quadrants and multiply by zernike modes
+            # Ask alex if we can compute a separate score for each quadrant
+
+        # compute log likelihood in zernike space
+
+        # autograd to get the score
+
+        # transform score back to pixel space
+
+        score_likelihood = (y - x_t) / (sig_t ** 2 + eta ** 2)
         score_prior = model.score(t, x_t)
 
         
