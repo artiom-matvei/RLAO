@@ -48,9 +48,13 @@ def plot_tensorboard_scalars(logdir):
     aggregated_data = {}
 
     for exp_name, tags in scalar_data.items():
-        if "CL_OOPAO" not in exp_name and "m2m" not in exp_name:
-            continue  # Only process experiments containing "Multi"
+        if "CL_OOPAO" not in exp_name:
+            continue  # Only process experiments containing specific keywords
+        elif "m2m" not in exp_name:
+            continue
         
+        else:
+            print(exp_name)
         for tag, data in tags.items():
             if "return" not in tag:
                 continue  # Only process scalars containing "return"
@@ -60,16 +64,33 @@ def plot_tensorboard_scalars(logdir):
                     aggregated_data[step] = []
                 aggregated_data[step].append(value)
 
-   # Convert to sorted lists for plotting
+    # Sort steps
     steps = sorted(aggregated_data.keys())
-    means = np.array([np.mean(aggregated_data[step]) for step in steps])
-    maxs = np.array([np.max(aggregated_data[step]) for step in steps])
-    mins = np.array([np.min(aggregated_data[step]) for step in steps])
 
-    # Plot mean with shaded error region
+    # Create a list of lists where each inner list contains returns for one run
+    runs = []
+    for step in steps:
+        runs.append(aggregated_data[step])
+
+    # Convert runs into a NumPy array, padding missing values with NaN
+    max_len = max(len(run) for run in runs)
+    runs_padded = np.full((max_len, len(steps)), np.nan)  # Create an array full of NaNs
+
+    for i, step in enumerate(steps):
+        values = aggregated_data[step]
+        runs_padded[:len(values), i] = values  # Fill available values
+
+    # Compute mean, ignoring NaN values
+    means = np.nanmean(runs_padded, axis=0)
+
+    # Plot each individual run with low alpha
     plt.figure(figsize=(10, 6))
-    plt.plot(steps, means, label="Mean Return", color='b')
-    plt.fill_between(steps, mins, maxs, alpha=0.3, color='b', label="Min / Max")
+    print(runs_padded.shape)
+    for run in runs_padded:
+        plt.plot(steps, run, alpha=0.2, color='b')
+
+    # Plot mean in bold
+    plt.plot(steps, means, color='b', linewidth=2.5, label="Mean Return")
 
     plt.xlabel("Steps")
     plt.ylabel("Return")
