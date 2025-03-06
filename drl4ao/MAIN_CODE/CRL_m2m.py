@@ -215,6 +215,10 @@ if __name__ == "__main__":
         )
 
     num_runs = 10
+    seeds = [167640, 813868, 168772, 214449,
+            9498, 398085, 753264, 331695,
+            950521, 715051]
+    
     envs = gym.vector.SyncVectorEnv([make_env()])
     
     for i in range(num_runs):
@@ -240,7 +244,7 @@ if __name__ == "__main__":
         )
 
         # Random seed for multiple runs
-        args.seed = np.random.randint(1e6)
+        args.seed = seeds[i] # logged seed values
 
         # TRY NOT TO MODIFY: seeding
         random.seed(args.seed)
