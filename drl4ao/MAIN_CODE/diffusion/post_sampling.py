@@ -14,6 +14,11 @@ lr = np.load(f'{script_dir}/images/lr.npy')
 hr = np.load(f'{script_dir}/images/hr.npy')
 
 zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')
+mode_decomp = np.linalg.pinv(zernike_modes)
+wfs_pupil_mask = np.load(f'{script_dir}/masks_and_transforms/wfs_pupil_mask.npy')
+padded_pupil_mask = np.pad(wfs_pupil_mask, pad_width=1, mode='constant', constant_values=0)
+xvalid, yvalid = np.where(padded_pupil_mask == 1)
+
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
@@ -28,11 +33,15 @@ dt = -1/num_steps #reverse time
 s_min = model.sde.sigma_min
 s_max = model.sde.sigma_max
 
+aa_T = torch.from_numpy(mode_decomp @ zernike_modes).to(device)
+aa_block = torch.kron(torch.eye(4).to(device), aa_T)
+
 with torch.no_grad():
     # for eta in np.logspace(1, 2.2, 10):
     eta = 0.05
 
-    y = torch.from_numpy(lr[:B]).to(device)
+    y_modes = np.einsum('mn,bcn->bcm', mode_decomp, lr[:B,:,xvalid, yvalid])
+    y = torch.from_numpy(y_modes).to(device)
 
     x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
 
@@ -48,22 +57,20 @@ with torch.no_grad():
 
         sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
 
-        # transform x_t and y to zernike space
+        Sigma_t = eta**2 * torch.eye(95).to(device) + aa_T * sig_t[0].squeeze().squeeze().squeeze()**2
+        Sigma_t_inv = torch.inverse(Sigma_t)
+        Sigma_t_inv = Sigma_t_inv.clone().contiguous()
+        Sigma_t_inv_block = torch.kron(torch.eye(4), Sigma_t_inv)
 
-            # chop x_t and y into quadrants (and trim the edges)
-            # mask the quadrants and multiply by zernike modes
-            # Ask alex if we can compute a separate score for each quadrant
+        Ax_t = torch.from_numpy(np.einsum('mn,bcn->bcm', mode_decomp, x_t.detach().cpu()[:B,:,xvalid, yvalid]))
 
-        # compute log likelihood in zernike space
+        diff = (y - Ax_t).reshape(B, -1)
 
-        # autograd to get the score
+        log_likelihood = -0.5 *torch.einsum('bi,bi->b', diff, Sigma_t_inv_block @ (y - Ax_t).reshape(B, -1).unsqueeze(-1))
+        score_likelihood = torch.autograd.grad(log_likelihood, x_t)
 
-        # transform score back to pixel space
-
-        score_likelihood = (y - x_t) / (sig_t ** 2 + eta ** 2)
         score_prior = model.score(t, x_t)
 
-        
         dx = - g**2 * ( score_likelihood + score_prior) * dt + g * dw
 
         x_t += dx
