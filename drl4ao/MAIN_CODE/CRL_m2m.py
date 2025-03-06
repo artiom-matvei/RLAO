@@ -175,6 +175,8 @@ class Actor(nn.Module):
         )
 
     def forward(self, x):
+
+        base_action = x[0]
         # Process each mode separately
         mode_outputs = []
         for i in range(x.shape[2]):  # Iterate over modes
@@ -182,11 +184,13 @@ class Actor(nn.Module):
             mode_outputs.append(mode_out)
 
         x = torch.cat(mode_outputs, dim=1)  # Shape: (batch_size, 2 * hidden_dim)
-        mean = self.fc_mean(x)
+        residual = self.fc_mean(x)
         log_std = self.fc_logstd(x)
         log_std = torch.tanh(log_std)
         log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
 
+        mean = residual + base_action
+        
         return mean, log_std
 
     def get_action(self, x):
