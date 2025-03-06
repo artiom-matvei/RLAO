@@ -53,7 +53,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 1e3
+    learning_starts: int = 1e2
     """timestep to start learning"""
     policy_lr: float = 0.000383
     """the learning rate of the policy network optimizer"""
@@ -176,7 +176,7 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        base_action = x[0]
+        base_action = x[0][0]
         # Process each mode separately
         mode_outputs = []
         for i in range(x.shape[2]):  # Iterate over modes
@@ -190,7 +190,7 @@ class Actor(nn.Module):
         log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
 
         mean = residual + base_action
-        
+
         return mean, log_std
 
     def get_action(self, x):
