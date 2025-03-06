@@ -224,7 +224,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"minus_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
