@@ -142,7 +142,7 @@ class OOPAO(gym.Env):
         self.atm.generateNewPhaseScreen(seed = np.random.randint(1e9))
         self.tel*self.wfs
 
-        slopes = -1 * torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         slopes *= self.scale_up
 
         obs = torch.cat((slopes.unsqueeze(0), self.obs_history), 0)
@@ -169,7 +169,7 @@ class OOPAO(gym.Env):
         self.tel*self.dm*self.wfs
         self.tel*self.wfs
 
-        slopes = -1 * torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         slopes *= self.scale_up
 
         self.obs_history = torch.roll(self.obs_history, shifts=1, dims=0)
