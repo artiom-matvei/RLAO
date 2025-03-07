@@ -53,7 +53,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 1e2
+    learning_starts: int = 5e3
     """timestep to start learning"""
     policy_lr: float = 0.000383
     """the learning rate of the policy network optimizer"""
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"residual_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"IM_warmup_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
@@ -299,7 +299,9 @@ if __name__ == "__main__":
             if global_step < args.learning_starts:
                 if global_step % 100 == 0:
                     print(f"WARMUP: {global_step}/{int(args.learning_starts)}")
-                actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+                # actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+                # Warmup with IM actions
+                actions = np.array([-1 * obs[0][i] for i in range(envs.num_envs)])
             else:
                 actions, _, _ = actor.get_action(torch.Tensor(obs).to(device))
                 actions = actions.detach().cpu().numpy()
