@@ -98,7 +98,7 @@ def plot_tensorboard_scalars(logdir):
     plt.legend()
     plt.show()
 
-
+#%%
 # Example usage
 log_directory = "/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/runs"
 plot_tensorboard_scalars(log_directory)

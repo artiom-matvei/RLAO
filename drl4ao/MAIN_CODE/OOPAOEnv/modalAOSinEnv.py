@@ -19,7 +19,7 @@ class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     #--------------------------Core gym funtions--------------------------------
-    def __init__(self, T=5, d=1, seed=0):
+    def __init__(self, T=5, seed=0):
 
         # Load in configuration file
         self.conf_path = 'Conf/papyrus_config.yaml'
@@ -32,7 +32,6 @@ class OOPAO(gym.Env):
         self.T = T
         self.seed = seed
         self.t = 0
-        self.d = d
         self.n = self.args.nModes
 
 
@@ -112,7 +111,7 @@ class OOPAO(gym.Env):
             )
         
         self.args.modulation = 3
-        self.args.delay = 1
+        self.args.delay = 2
         self.args.nLoop = 500
 
         self.current_steps = 0

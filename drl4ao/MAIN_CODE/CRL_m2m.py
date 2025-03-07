@@ -53,7 +53,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 5e3
+    learning_starts: int = 1e3
     """timestep to start learning"""
     policy_lr: float = 0.000383
     """the learning rate of the policy network optimizer"""
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"scaled_IM_warmup_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"2_delay_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
