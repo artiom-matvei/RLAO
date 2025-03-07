@@ -163,6 +163,9 @@ class Actor(nn.Module):
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
 
+        # Learnable residual scaling factor
+        self.residual_scale = nn.Parameter(0.01 * torch.ones(1))  # Initialized to 1.0
+
 
         # self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
         # self.fc_logstd = nn.Linear(64, np.prod(env.single_action_space.shape))
@@ -189,7 +192,7 @@ class Actor(nn.Module):
         log_std = torch.tanh(log_std)
         log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
 
-        mean = residual + base_action
+        mean = base_action + self.residual_scale * residual
 
         return mean, log_std
 
