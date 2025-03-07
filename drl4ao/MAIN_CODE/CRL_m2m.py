@@ -164,7 +164,7 @@ class Actor(nn.Module):
         )
 
         # Learnable residual scaling factor
-        self.residual_scale = nn.Parameter(0.01 * torch.ones(1))  # Initialized to 1.0
+        self.residual_scale = nn.Parameter(1e-5 * torch.ones(1))  # Initialized to 1.0
 
 
         # self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
@@ -179,7 +179,6 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        base_action = -1 * x[0][0]
         # Process each mode separately
         mode_outputs = []
         for i in range(x.shape[2]):  # Iterate over modes
@@ -187,12 +186,10 @@ class Actor(nn.Module):
             mode_outputs.append(mode_out)
 
         x = torch.cat(mode_outputs, dim=1)  # Shape: (batch_size, 2 * hidden_dim)
-        residual = self.fc_mean(x)
+        mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
         log_std = torch.tanh(log_std)
         log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
-
-        mean = base_action + self.residual_scale * residual
 
         return mean, log_std
 
@@ -202,12 +199,21 @@ class Actor(nn.Module):
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()
         y_t = torch.tanh(x_t) # for reparameterization trick (mean + std * N(0,1))
-        action = y_t * self.action_scale + self.action_bias
+
+        base_action = -1 * x[:, 0]
+        residual_action = y_t * self.action_scale + self.action_bias
+
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
+
+        action = base_action + self.residual_scale * residual_action
+
+        print(f"base_action: {base_action}, {base_action.shape}")
+        print(f"residual_action: {self.residual_scale * residual_action}, {residual_action.shape}")
+
         return action, log_prob, mean
 
 
