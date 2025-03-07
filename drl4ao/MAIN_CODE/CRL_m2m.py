@@ -179,7 +179,7 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        base_action = x[0][0]
+        base_action = -1 * x[0][0]
         # Process each mode separately
         mode_outputs = []
         for i in range(x.shape[2]):  # Iterate over modes
@@ -231,7 +231,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"IM_warmup_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"scaled_IM_warmup_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
