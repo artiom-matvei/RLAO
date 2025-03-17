@@ -1,6 +1,7 @@
 #%%
 import os,sys
 import torch
+from scipy.ndimage import gaussian_filter
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -86,6 +87,10 @@ with torch.no_grad():
     reshaped_wfs = torch.from_numpy(wfs_frames).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
     pred_filt = reconstructor_filt(reshaped_wfs).squeeze(1)
 
+with torch.no_grad():
+    reshaped_wfs = torch.from_numpy(gaussian_filter(wfs_frames, sigma=0.4, axes=(1,2))).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
+    pred_filt_blurred = reconstructor_filt(reshaped_wfs).squeeze(1)
+
 checkpoint_full = torch.load(savedir+'/models/thesis_models/atmos.pt',map_location=device)
 reconstructor_full = Unet_big(env.xvalid,env.yvalid)
 # Restore the regular model and optimizer state
@@ -140,15 +145,16 @@ def vec(imgs):
 
 rmse_lin = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - lin_pred)**2, axis=1))
 rmse_net_filt = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_filt).detach().numpy())**2, axis=1))
+rmse_net_filt_blur = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_filt_blurred).detach().numpy())**2, axis=1))
 rmse_net_full = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_full).detach().numpy())**2, axis=1))
 
 
 plt.figure(figsize=(6, 7))
-plt.boxplot([rmse_lin,rmse_net_filt, rmse_net_full], labels=['Linear', "Network (Filtered)", "Network (Full)"])
+plt.boxplot([rmse_lin,rmse_net_filt, rmse_net_filt_blur, rmse_net_full], labels=['Linear', "NN (Filtered)", "NN (Filtered | Blur)", "NN (Full)"])
 plt.ylabel("RMSE")
 plt.title("RMS Reconstruction Error")
 plt.grid(axis='y', linestyle='--', alpha=0.7)
-# plt.yscale('log')
+plt.yscale('log')
 
 plt.show()
 
