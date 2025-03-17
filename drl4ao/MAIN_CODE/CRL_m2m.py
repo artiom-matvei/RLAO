@@ -122,7 +122,7 @@ class SoftQNetwork(nn.Module):
         return x
 
 
-LOG_STD_MAX = 2
+LOG_STD_MAX = -2
 LOG_STD_MIN = -10
 
 
