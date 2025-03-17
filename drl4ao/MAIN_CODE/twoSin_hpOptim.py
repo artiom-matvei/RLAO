@@ -48,13 +48,13 @@ class Args:
     """total timesteps of the experiments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
-    gamma: float = 0.99
+    gamma: float = 0.1
     """the discount factor gamma"""
     tau: float = 0.01
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 1e4
+    learning_starts: int = 1e3
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -112,8 +112,8 @@ class SoftQNetwork(nn.Module):
         return x
 
 
-LOG_STD_MAX = 2
-LOG_STD_MIN = -5
+LOG_STD_MAX = -2
+LOG_STD_MIN = -10
 
 
 class Actor(nn.Module):
@@ -187,12 +187,20 @@ class Actor(nn.Module):
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
         y_t = torch.tanh(x_t)
-        action = y_t * self.action_scale + self.action_bias
+
+
+        base_action = -1 * x[:, 0]
+        residual_action = y_t * self.action_scale + self.action_bias
+
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
+
+        action = base_action + self.residual_scale * residual_action
+
+
         return action, log_prob, mean
 
 #%%
@@ -207,17 +215,17 @@ def objective(trial):
         )
 
     args = tyro.cli(Args, args=[])
-    args.gamma = trial.suggest_float("gamma", 0.7, 0.999)
+    # args.gamma = trial.suggest_float("gamma", 0.7, 0.999)
     args.tau = trial.suggest_float("tau", 0.001, 0.1, log=True)
-    args.batch_size = trial.suggest_int("batch_size", 32, 256)
-    args.learning_starts = trial.suggest_int("learning_starts", 1000, 10000)
+    # args.batch_size = trial.suggest_int("batch_size", 32, 256)
+    # args.learning_starts = trial.suggest_int("learning_starts", 1000, 10000)
     args.policy_lr = trial.suggest_float("policy_lr", 1e-5, 1e-3, log=True)
     args.q_lr = trial.suggest_float("q_lr", 1e-5, 1e-3, log=True)
     args.policy_frequency = trial.suggest_int("policy_frequency", 1, 10)
     args.target_network_frequency = trial.suggest_int("target_network_frequency", 1, 10)
     args.alpha = trial.suggest_float("alpha", 0.01, 0.1, log=True)
-    args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
-    args.exp_name = "optuna_CL_TT"
+    # args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
+    args.exp_name = "optuna_CL_low_std"
 
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:

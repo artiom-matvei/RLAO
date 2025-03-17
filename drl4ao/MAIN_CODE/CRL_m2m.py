@@ -47,7 +47,7 @@ class Args:
     """the number of parallel game environments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
-    gamma: float = 0.9
+    gamma: float = 0.1
     """the discount factor gamma"""
     tau: float = 0.00385
     """target smoothing coefficient (default: 0.005)"""
@@ -198,22 +198,22 @@ class Actor(nn.Module):
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
-        # y_t = torch.tanh(x_t) # REMOVING TANH HERE
-        y_t = x_t
+        y_t = torch.tanh(x_t) # REMOVING TANH HERE
+        # y_t = x_t
 
         base_action = -1 * x[:, 0]
         residual_action = y_t * self.action_scale + self.action_bias
 
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
-        # log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
+        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
 
         action = base_action + self.residual_scale * residual_action
 
-        print(f"base_action: {base_action}, {base_action.shape}")
-        print(f"residual_action: {self.residual_scale * residual_action}, {residual_action.shape}")
+        # print(f"base_action: {base_action}, {base_action.shape}")
+        # print(f"residual_action: {self.residual_scale * residual_action}, {residual_action.shape}")
 
         return action, log_prob, mean
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"2_delay_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"low_std_run_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
