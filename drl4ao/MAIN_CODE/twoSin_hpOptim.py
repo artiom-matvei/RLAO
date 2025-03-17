@@ -155,6 +155,9 @@ class Actor(nn.Module):
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
 
+        # Learnable residual scaling factor
+        self.residual_scale = nn.Parameter(1e-5 * torch.ones(1))  # Initialized to 1.0
+
 
         # self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
         # self.fc_logstd = nn.Linear(64, np.prod(env.single_action_space.shape))
