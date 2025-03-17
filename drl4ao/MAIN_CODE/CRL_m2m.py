@@ -123,7 +123,7 @@ class SoftQNetwork(nn.Module):
 
 
 LOG_STD_MAX = 2
-LOG_STD_MIN = -5
+LOG_STD_MIN = -10
 
 
 class Actor(nn.Module):
@@ -197,15 +197,16 @@ class Actor(nn.Module):
         mean, log_std = self(x)
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
-        x_t = normal.rsample()
-        y_t = torch.tanh(x_t) # for reparameterization trick (mean + std * N(0,1))
+        x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
+        # y_t = torch.tanh(x_t) # REMOVING TANH HERE
+        y_t = x_t
 
         base_action = -1 * x[:, 0]
         residual_action = y_t * self.action_scale + self.action_bias
 
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
-        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
+        # log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
 
