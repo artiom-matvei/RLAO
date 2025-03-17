@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from score_models import ScoreModel, NCSNpp
 
 from data_loading.dataset_tools import DiffusionDataset, uncondDataset
-
+#%%
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))

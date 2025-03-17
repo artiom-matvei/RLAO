@@ -66,7 +66,9 @@ with torch.no_grad():
 
         diff = (y - Ax_t).reshape(B, -1)
 
-        log_likelihood = -0.5 *torch.einsum('bi,bi->b', diff, Sigma_t_inv_block @ (y - Ax_t).reshape(B, -1).unsqueeze(-1))
+        S_into = Sigma_t_inv_block @ (y - Ax_t).reshape(B, -1).unsqueeze(-1)
+
+        log_likelihood = -0.5 *torch.einsum('bi,bi->b', diff, S_into.squeeze())
         score_likelihood = torch.autograd.grad(log_likelihood, x_t)
 
         score_prior = model.score(t, x_t)
