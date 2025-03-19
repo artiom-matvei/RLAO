@@ -50,7 +50,7 @@ def plot_tensorboard_scalars(logdir):
     for exp_name, tags in scalar_data.items():
         if "CL_OOPAO" not in exp_name:
             continue  # Only process experiments containing specific keywords
-        elif "2_delay" not in exp_name:
+        elif "optuna_CL_low_std" not in exp_name:
             continue
         
         else:
@@ -87,10 +87,10 @@ def plot_tensorboard_scalars(logdir):
     plt.figure(figsize=(10, 6))
     print(runs_padded.shape)
     for run in runs_padded:
-        plt.plot(steps, run, alpha=0.2, color='b')
+        plt.plot(steps[5:], run[5:], alpha=0.2, color='b')
 
     # Plot mean in bold
-    plt.plot(steps, means, color='b', linewidth=2.5, label="Mean Return")
+    plt.plot(steps[5:], means[5:], color='b', linewidth=2.5, label="Mean Return")
 
     plt.xlabel("Steps")
     plt.ylabel("Return")

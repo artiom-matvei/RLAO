@@ -34,7 +34,7 @@ dt = -1/num_steps #reverse time
 s_min = model.sde.sigma_min
 s_max = model.sde.sigma_max
 
-aa_T = torch.from_numpy(mode_decomp @ zernike_modes).to(device)
+aa_T = torch.from_numpy(mode_decomp @ zernike_modes).to(device=device, dtype=torch.float32)
 aa_block = torch.kron(torch.eye(4).to(device), aa_T)
 
 
@@ -42,8 +42,8 @@ def log_likelihood(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y):
 
     Sigma_t = eta**2 * torch.eye(len(zernike_modes[0])).to(device) + aa_T * sig_t[0].squeeze()**2
     Sigma_t_inv = torch.inverse(Sigma_t)
-    Sigma_t_inv = Sigma_t_inv.clone().contiguous()
-    Sigma_t_inv_block = torch.kron(torch.eye(4), Sigma_t_inv)
+    Sigma_t_inv = Sigma_t_inv.clone().contiguous().to(device)
+    Sigma_t_inv_block = torch.kron(torch.eye(4).to(device), Sigma_t_inv).to(device=device)
 
     Ax_t = torch.einsum('mn,cn->cm', mode_decomp, x_t[:,xvalid, yvalid])
 
@@ -59,8 +59,11 @@ for t_start in np.linspace(1, 0, 10):
         # for eta in np.logspace(1, 2.2, 10):
         eta = 0.
 
-        y_modes = np.einsum('mn,bcn->bcm', mode_decomp, lr[:B,:,xvalid, yvalid])
-        y = torch.from_numpy(y_modes).to(device)
+        lr = torch.tensor(lr, dtype=torch.float32, device=device)
+
+        mode_decomp = torch.tensor(mode_decomp, dtype=torch.float32, device=device)
+        y_modes = torch.einsum('mn,bcn->bcm', mode_decomp, lr[:B,:,xvalid, yvalid])
+        y = y_modes.to(device)
 
         # x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
         x_t = torch.tensor(lr[:B]).to(device)
@@ -77,7 +80,7 @@ for t_start in np.linspace(1, 0, 10):
 
             sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
             
-            score_likelihood = vmap(grad(log_likelihood, argnums=(0,)), in_dims=(0, None, 0, None, None, None, None, 0))(x_t, eta, sig_t, aa_T, torch.tensor(mode_decomp, dtype=torch.float32), xvalid, yvalid, y)
+            score_likelihood = vmap(grad(log_likelihood, argnums=(0,)), in_dims=(0, None, 0, None, None, None, None, 0))(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y)
 
             score_likelihood = score_likelihood[0]
 
@@ -88,8 +91,9 @@ for t_start in np.linspace(1, 0, 10):
 
             x_t += dx
 
+        
 
-        lr_fft2 = np.fft.fft2(lr.sum(axis=1))
+        lr_fft2 = np.fft.fft2(lr.detach().cpu().sum(axis=1))
         lr_fft_shifted = np.fft.fftshift(lr_fft2, axes=(-2, -1))
 
         hr_fft2 = np.fft.fft2(hr.sum(axis=1))
@@ -146,7 +150,8 @@ for t_start in np.linspace(1, 0, 10):
         batch_pow_lr = np.array(batch_pow_lr)
         batch_pow_hr = np.array(batch_pow_hr)
         batch_pow_sam = np.array(batch_pow_sam)
-
+        
+        figure = plt.figure()
         plt.plot(np.mean(batch_pow_lr, axis=0), label="LR")
         plt.plot(np.mean(batch_pow_hr, axis=0), label="HR")
         plt.plot(np.mean(batch_pow_sam, axis=0), label="Sampled")
@@ -155,8 +160,9 @@ for t_start in np.linspace(1, 0, 10):
         plt.title(f't_start = {t_start}, eta = {eta}, num_modes = {len(zernike_modes[0])}')
         # plt.title(f'Basically prior sampling')
 
-        plt.savefig(f'{script_dir}/images/powerspectrum_eta_{eta:.0f}_t_start_{t_start}.png')
-        # plt.show()
+        plt.savefig(f'{script_dir}/images/powerspectrum_eta_{eta:.0f}_t_start_{t_start:.2f}.png')
+        plt.show()
+
         # np.save(f'{script_dir}/images/batch_pow_lr_{eta:.0f}.npy', batch_pow_lr)
         # np.save(f'{script_dir}/images/batch_pow_hr_{eta:.0f}.npy', batch_pow_hr)
         # np.save(f'{script_dir}/images/batch_pow_sam_{eta:.0f}.npy', batch_pow_sam)
