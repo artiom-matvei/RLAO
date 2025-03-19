@@ -1,5 +1,6 @@
 #%%
 import torch
+from torch.func import grad, vmap
 import numpy as np
 import os, sys
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 lr = np.load(f'{script_dir}/images/lr.npy')
 hr = np.load(f'{script_dir}/images/hr.npy')
 
-zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')
+zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')[:,:30]
 mode_decomp = np.linalg.pinv(zernike_modes)
 wfs_pupil_mask = np.load(f'{script_dir}/masks_and_transforms/wfs_pupil_mask.npy')
 padded_pupil_mask = np.pad(wfs_pupil_mask, pad_width=1, mode='constant', constant_values=0)
@@ -27,7 +28,7 @@ channels = 4
 
 
 # %%
-num_steps = 100
+num_steps = 1000
 dt = -1/num_steps #reverse time
 
 s_min = model.sde.sigma_min
@@ -36,6 +37,23 @@ s_max = model.sde.sigma_max
 aa_T = torch.from_numpy(mode_decomp @ zernike_modes).to(device)
 aa_block = torch.kron(torch.eye(4).to(device), aa_T)
 
+
+def log_likelihood(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y):
+
+    Sigma_t = eta**2 * torch.eye(len(zernike_modes[0])).to(device) + aa_T * sig_t[0].squeeze()**2
+    Sigma_t_inv = torch.inverse(Sigma_t)
+    Sigma_t_inv = Sigma_t_inv.clone().contiguous()
+    Sigma_t_inv_block = torch.kron(torch.eye(4), Sigma_t_inv)
+
+    Ax_t = torch.einsum('mn,cn->cm', mode_decomp, x_t[:,xvalid, yvalid])
+
+    diff = (y - Ax_t).reshape(-1)
+
+    S_into = Sigma_t_inv_block @ (y - Ax_t).reshape(-1).unsqueeze(-1)
+
+    return -0.5 *torch.dot(diff, S_into.squeeze())
+     
+
 with torch.no_grad():
     # for eta in np.logspace(1, 2.2, 10):
     eta = 0.05
@@ -43,9 +61,11 @@ with torch.no_grad():
     y_modes = np.einsum('mn,bcn->bcm', mode_decomp, lr[:B,:,xvalid, yvalid])
     y = torch.from_numpy(y_modes).to(device)
 
-    x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
+    # x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
+    x_t = torch.tensor(lr[:B]).to(device)
 
-    t_start = np.log(np.std(lr[0][0] - hr[0][0])) / np.log(s_max / s_min)
+    # t_start = np.log(np.std(lr[0][0] - hr[0][0])) / np.log(s_max / s_min)
+    t_start = 0.85
 
     for i, t in enumerate(np.linspace(t_start, 0, num_steps)):
         print(f'Step {i}/{num_steps}')
@@ -56,27 +76,28 @@ with torch.no_grad():
         g = model.sde.diffusion(t, x_t)
 
         sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
+        
+        # score_likelihood = vmap(grad(log_likelihood, argnums=(0,)), in_dims=(0, None, 0, None, None, None, None, 0))(x_t, eta, sig_t, aa_T, torch.tensor(mode_decomp, dtype=torch.float32), xvalid, yvalid, y)
 
-        Sigma_t = eta**2 * torch.eye(95).to(device) + aa_T * sig_t[0].squeeze().squeeze().squeeze()**2
-        Sigma_t_inv = torch.inverse(Sigma_t)
-        Sigma_t_inv = Sigma_t_inv.clone().contiguous()
-        Sigma_t_inv_block = torch.kron(torch.eye(4), Sigma_t_inv)
-
-        Ax_t = torch.from_numpy(np.einsum('mn,bcn->bcm', mode_decomp, x_t.detach().cpu()[:B,:,xvalid, yvalid]))
-
-        diff = (y - Ax_t).reshape(B, -1)
-
-        S_into = Sigma_t_inv_block @ (y - Ax_t).reshape(B, -1).unsqueeze(-1)
-
-        log_likelihood = -0.5 *torch.einsum('bi,bi->b', diff, S_into.squeeze())
-        score_likelihood = torch.autograd.grad(log_likelihood, x_t)
+        # score_likelihood = score_likelihood[0]
 
         score_prior = model.score(t, x_t)
 
-        dx = - g**2 * ( score_likelihood + score_prior) * dt + g * dw
+        # Ax_t = torch.einsum('mn,bcn->bcm', torch.tensor(mode_decomp, dtype=torch.float32), x_t[:B, :,xvalid, yvalid])
+        # plt.plot(Ax_t[0,0], color='r')
+        # plt.plot(y[0,0], color='k')
+        # plt.show()
+
+
+
+        # dx = - g**2 * (score_likelihood + score_prior) * dt + g * dw
+        dx = - g**2 * (score_prior) * dt + g * dw
+
+        # plt.imshow(x_t[0,0].detach().cpu().numpy())
+        # plt.colorbar()
+        # plt.show()
 
         x_t += dx
-
 
 
     lr_fft2 = np.fft.fft2(lr.sum(axis=1))
@@ -137,13 +158,15 @@ with torch.no_grad():
     batch_pow_hr = np.array(batch_pow_hr)
     batch_pow_sam = np.array(batch_pow_sam)
 
-    # plt.plot(np.mean(batch_pow_lr, axis=0), label="LR")
-    # plt.plot(np.mean(batch_pow_hr, axis=0), label="HR")
-    # plt.plot(np.mean(batch_pow_sam, axis=0), label="Sampled")
-    # plt.yscale('log')
-    # plt.legend()
+    plt.plot(np.mean(batch_pow_lr, axis=0), label="LR")
+    plt.plot(np.mean(batch_pow_hr, axis=0), label="HR")
+    plt.plot(np.mean(batch_pow_sam, axis=0), label="Sampled")
+    plt.yscale('log')
+    plt.legend()
+    # plt.title(f't_start = {t_start}, eta = {eta}, num_modes = {len(zernike_modes[0])}')
+    plt.title(f'Basically prior sampling')
 
-    # plt.show()
+    plt.show()
     np.save(f'{script_dir}/images/batch_pow_lr_{eta:.0f}.npy', batch_pow_lr)
     np.save(f'{script_dir}/images/batch_pow_hr_{eta:.0f}.npy', batch_pow_hr)
     np.save(f'{script_dir}/images/batch_pow_sam_{eta:.0f}.npy', batch_pow_sam)
