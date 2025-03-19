@@ -11,10 +11,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # Print the size in mb of the dataset file
-lr = np.load(f'{script_dir}/images/lr.npy')
-hr = np.load(f'{script_dir}/images/hr.npy')
+lr = np.load(f'{script_dir}/images/thesis_data/lr.npy')
+hr = np.load(f'{script_dir}/images/thesis_data/hr.npy')
 
-zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')[:,:30]
+num_modes = 30
+
+zernike_modes = np.load(f'{script_dir}/masks_and_transforms/m2c_wfs_pupil_95modes.npy')[:,:num_modes]
 mode_decomp = np.linalg.pinv(zernike_modes)
 wfs_pupil_mask = np.load(f'{script_dir}/masks_and_transforms/wfs_pupil_mask.npy')
 padded_pupil_mask = np.pad(wfs_pupil_mask, pad_width=1, mode='constant', constant_values=0)
@@ -23,7 +25,7 @@ xvalid, yvalid = np.where(padded_pupil_mask == 1)
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
-B = 100
+B = 1000
 channels = 4
 
 
@@ -184,12 +186,23 @@ for noise_scale in np.linspace(1, 100, 10):
         # Compute mean deviation across batch and pupils
         mean_D_x_t = np.mean(D_x_t, axis=(0, 1))  # Averaged over batch and pupils
         mean_D_hr = np.mean(D_hr, axis=(0, 1))  # Averaged over batch and pupils
+        std_D_hr = np.std(D_hr, axis=(0, 1))  # Standard deviation of HR deviation
 
+        # Compute 1-sigma and 2-sigma regions
+        hr_1sigma_upper = mean_D_hr + std_D_hr
+        hr_1sigma_lower = mean_D_hr - std_D_hr
+        hr_2sigma_upper = mean_D_hr + 2 * std_D_hr
+        hr_2sigma_lower = mean_D_hr - 2 * std_D_hr
 
         # Plot deviations
         plt.figure(figsize=(8, 5))
         plt.plot(mean_D_x_t, label="Mean Deviation of x_t from lr", c="k")
         plt.plot(mean_D_hr, label="Mean Deviation of hr from lr", c="b")
+
+        # Fill regions for 1σ and 2σ around hr deviation
+        plt.fill_between(range(num_modes), hr_1sigma_lower, hr_1sigma_upper, color='b', alpha=0.3, label="1σ HR Deviation")
+        plt.fill_between(range(num_modes), hr_2sigma_lower, hr_2sigma_upper, color='b', alpha=0.15, label="2σ HR Deviation")
+
         plt.xlabel("Mode index")
         plt.ylabel("Mean Relative Power Deviation")
         plt.legend()
