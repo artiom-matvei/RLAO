@@ -38,9 +38,9 @@ aa_T = torch.from_numpy(mode_decomp @ zernike_modes).to(device=device, dtype=tor
 aa_block = torch.kron(torch.eye(4).to(device), aa_T)
 
 
-def log_likelihood(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y):
+def log_likelihood(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y, noise_scale):
 
-    Sigma_t = eta**2 * torch.eye(len(zernike_modes[0])).to(device) + aa_T * sig_t[0].squeeze()**2
+    Sigma_t = eta**2 * torch.eye(len(zernike_modes[0])).to(device) + aa_T * sig_t[0].squeeze()**2 / noise_scale
     Sigma_t_inv = torch.inverse(Sigma_t)
     Sigma_t_inv = Sigma_t_inv.clone().contiguous().to(device)
     Sigma_t_inv_block = torch.kron(torch.eye(4).to(device), Sigma_t_inv).to(device=device)
@@ -54,7 +54,7 @@ def log_likelihood(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y):
     return -0.5 *torch.dot(diff, S_into.squeeze())
      
 
-for t_start in np.linspace(1, 0, 10):
+for noise_scale in np.linspace(1, 100, 10):
     with torch.no_grad():
         # for eta in np.logspace(1, 2.2, 10):
         eta = 0.
@@ -68,7 +68,7 @@ for t_start in np.linspace(1, 0, 10):
         # x_t = torch.normal(0, s_max, (B, channels, 24, 24)).to(device)
         x_t = torch.tensor(lr[:B]).to(device)
         # t_start = np.log(np.std(lr[0][0] - hr[0][0])) / np.log(s_max / s_min)
-        # t_start = 0.85
+        t_start = 1.
 
         for i, t in enumerate(np.linspace(t_start, 0, num_steps)):
             print(f'Step {i}/{num_steps}')
@@ -80,7 +80,7 @@ for t_start in np.linspace(1, 0, 10):
 
             sig_t = model.sde.sigma(t).unsqueeze(1).unsqueeze(2).unsqueeze(3)
             
-            score_likelihood = vmap(grad(log_likelihood, argnums=(0,)), in_dims=(0, None, 0, None, None, None, None, 0))(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y)
+            score_likelihood = vmap(grad(log_likelihood, argnums=(0,)), in_dims=(0, None, 0, None, None, None, None, 0, None))(x_t, eta, sig_t, aa_T, mode_decomp, xvalid, yvalid, y, noise_scale)
 
             score_likelihood = score_likelihood[0]
 
@@ -157,10 +157,10 @@ for t_start in np.linspace(1, 0, 10):
         plt.plot(np.mean(batch_pow_sam, axis=0), label="Sampled")
         plt.yscale('log')
         plt.legend()
-        plt.title(f't_start = {t_start}, eta = {eta}, num_modes = {len(zernike_modes[0])}')
+        plt.title(f't_start = {t_start:.2f}, noise scale = {noise_scale}, num_modes = {len(zernike_modes[0])}')
         # plt.title(f'Basically prior sampling')
 
-        plt.savefig(f'{script_dir}/images/powerspectrum_eta_{eta:.0f}_t_start_{t_start:.2f}.png')
+        plt.savefig(f'{script_dir}/images/powerspectrum_noise_scale_{noise_scale:.0f}_t_start_{t_start:.2f}.png')
         plt.show()
 
         # np.save(f'{script_dir}/images/batch_pow_lr_{eta:.0f}.npy', batch_pow_lr)
@@ -168,9 +168,9 @@ for t_start in np.linspace(1, 0, 10):
         # np.save(f'{script_dir}/images/batch_pow_sam_{eta:.0f}.npy', batch_pow_sam)
 
         fig2 = plt.figure()
-        x_t_modes = np.einsum('mn,bcn->bcm', mode_decomp, x_t.detach().cpu()[:,:,xvalid, yvalid])
-        lr_modes = np.einsum('mn,bcn->bcm', mode_decomp, lr.detach().cpu()[:,:,xvalid, yvalid])
-        hr_modes = np.einsum('mn,bcn->bcm', mode_decomp, hr[:,:,xvalid, yvalid])
+        x_t_modes = np.einsum('mn,bcn->bcm', mode_decomp.detach().cpu(), x_t.detach().cpu()[:,:,xvalid, yvalid])
+        lr_modes = np.einsum('mn,bcn->bcm', mode_decomp.detach().cpu(), lr.detach().cpu()[:,:,xvalid, yvalid])
+        hr_modes = np.einsum('mn,bcn->bcm', mode_decomp.detach().cpu(), hr[:,:,xvalid, yvalid])
 
         # Compute power spectra per image and pupil
         P_x_t = x_t_modes**2
@@ -193,9 +193,9 @@ for t_start in np.linspace(1, 0, 10):
         plt.xlabel("Mode index")
         plt.ylabel("Mean Relative Power Deviation")
         plt.legend()
-        plt.title(f"Mean Modal Deviation - eta = {eta:.0f}, t_start = {t_start:.2f}")
+        plt.title(f"Mean Modal Deviation - noise scale = {noise_scale:.0f}, t_start = {t_start:.2f}")
         plt.yscale('log')
-        plt.savefig(f'{script_dir}/images/mean_deviation_eta_{eta:.0f}_t_start_{t_start:.2f}.png')
+        plt.savefig(f'{script_dir}/images/mean_deviation_noise_scale_{noise_scale:.0f}_t_start_{t_start:.2f}.png')
         plt.show()
 
     # torch.save(x_t, f'{script_dir}/images/samples_unc.pt')
