@@ -200,3 +200,24 @@ for noise_scale in np.linspace(1, 100, 10):
 
     # torch.save(x_t, f'{script_dir}/images/samples_unc.pt')
 # %%
+fig, ax = plt.subplots(3, 4)
+
+for i in range(4):
+    ax[0, i].imshow(lr.detach().cpu()[0][i])
+    ax[0, i].axis('off')
+    ax[0, i].set_title(f"Pupil {i+1}")
+    ax[1, i].imshow(hr[0][i])
+    ax[1, i].axis('off')
+    ax[2, i].imshow(x_t.detach().cpu()[0][i])
+    ax[2, i].axis('off')
+
+row_labels = ["Low-Resolution (LR)", "High-Resolution (HR)", "Diffused Sample (x_t)"]
+
+
+for row in range(3):
+    ax[row, 0].annotate(row_labels[row], xy=(-0.5, 0.5), xycoords="axes fraction",
+                         va='center', ha='right', fontsize=12, fontweight='bold',
+                         rotation=0)
+
+plt.savefig(f'{script_dir}/images/example_sample.png')
+plt.show()

@@ -1,3 +1,4 @@
+#%%
 import os, sys
 import numpy as np
 import time
@@ -16,17 +17,17 @@ except:
 env = get_env(args)
 
 #%%
-savedir = os.path.dirname(__file__) + '/datsets/thesis_data'
+savedir = os.path.dirname(__file__) + '/../diffusion/images/thesis_data'
 
 if not os.path.exists(savedir):
     os.makedirs(savedir)
 
 #%%
-size = int(4e5)
+size = int(1e3)
 
 
-dm_commands = np.memmap(savedir+f'/dm_cmds.npy', dtype='float32', mode='w+', \
-                                            shape=(size, *env.dm.coefs.shape))
+# dm_commands = np.memmap(savedir+f'/dm_cmds.npy', dtype='float32', mode='w+', \
+#                                             shape=(size, *env.dm.coefs.shape))
 wfs_frames = np.memmap(savedir+f'/wfs_frames_atm.npy', dtype='float32', mode='w+', \
                                                 shape=(size, *env.wfs.cam.frame.shape))
 wfs_frames_filtered = np.memmap(savedir+f'/wfs_frames_filtered.npy', dtype='float32', mode='w+', \
@@ -56,7 +57,7 @@ for j in range(size):
 
     # Save nModes controllable modes on DM as Grount Truth Commands
     nModes = 30
-    dm_commands[j] = np.float32(m2c[:, :nModes]@modes[:nModes])
+    # dm_commands[j] = np.float32(m2c[:, :nModes]@modes[:nModes])
 
     # Filter Phase to nModes modes
     filteredPhase = np.zeros_like(phase)
@@ -76,6 +77,6 @@ for j in range(size):
         start = time.time()
 
 
-dm_commands.flush()
+# dm_commands.flush()
 wfs_frames.flush()
 wfs_frames_filtered.flush()
