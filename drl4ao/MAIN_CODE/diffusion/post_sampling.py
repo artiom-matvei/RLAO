@@ -167,7 +167,36 @@ for t_start in np.linspace(1, 0, 10):
         # np.save(f'{script_dir}/images/batch_pow_hr_{eta:.0f}.npy', batch_pow_hr)
         # np.save(f'{script_dir}/images/batch_pow_sam_{eta:.0f}.npy', batch_pow_sam)
 
-            
+        fig2 = plt.figure()
+        x_t_modes = np.einsum('mn,bcn->bcm', mode_decomp, x_t.detach().cpu()[:,:,xvalid, yvalid])
+        lr_modes = np.einsum('mn,bcn->bcm', mode_decomp, lr.detach().cpu()[:,:,xvalid, yvalid])
+        hr_modes = np.einsum('mn,bcn->bcm', mode_decomp, hr[:,:,xvalid, yvalid])
+
+        # Compute power spectra per image and pupil
+        P_x_t = x_t_modes**2
+        P_lr = lr_modes**2
+        P_hr = hr_modes**2
+
+        # Compute deviation per image and pupil
+        D_x_t = np.abs(P_x_t - P_lr) / P_lr
+        D_hr = np.abs(P_hr - P_lr) / P_lr
+
+        # Compute mean deviation across batch and pupils
+        mean_D_x_t = np.mean(D_x_t, axis=(0, 1))  # Averaged over batch and pupils
+        mean_D_hr = np.mean(D_hr, axis=(0, 1))  # Averaged over batch and pupils
+
+
+        # Plot deviations
+        plt.figure(figsize=(8, 5))
+        plt.plot(mean_D_x_t, label="Mean Deviation of x_t from lr", c="k")
+        plt.plot(mean_D_hr, label="Mean Deviation of hr from lr", c="b")
+        plt.xlabel("Mode index")
+        plt.ylabel("Mean Relative Power Deviation")
+        plt.legend()
+        plt.title(f"Mean Modal Deviation - eta = {eta:.0f}, t_start = {t_start:.2f}")
+        plt.yscale('log')
+        plt.savefig(f'{script_dir}/images/mean_deviation_eta_{eta:.0f}_t_start_{t_start:.2f}.png')
+        plt.show()
 
     # torch.save(x_t, f'{script_dir}/images/samples_unc.pt')
 # %%
