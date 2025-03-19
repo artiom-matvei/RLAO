@@ -23,7 +23,7 @@ xvalid, yvalid = np.where(padded_pupil_mask == 1)
 
 model = ScoreModel(checkpoints_directory=f'{script_dir}/datasets/cp_unconditional/', device=device)
 
-B = 100
+B = 1000
 channels = 4
 
 
