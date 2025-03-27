@@ -238,7 +238,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"cst_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"cst2_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
@@ -311,7 +311,7 @@ if __name__ == "__main__":
                     print(f"WARMUP: {global_step}/{int(args.learning_starts)}")
                 # actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 # Warmup with IM actions
-                actions = np.array([-1 * obs[0][i] for i in range(envs.num_envs)])
+                actions = np.array([-1 * (obs[0][i] + 1) for i in range(envs.num_envs)])
             else:
                 actions, _, _ = actor.get_action(torch.Tensor(obs).to(device))
                 actions = actions.detach().cpu().numpy()
