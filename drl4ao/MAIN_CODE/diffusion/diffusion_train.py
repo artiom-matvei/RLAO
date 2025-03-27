@@ -28,7 +28,7 @@ env = get_env(args)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-HO_file_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/wfs_HO_diff.npy'
+HO_file_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/wfs_HO_thesis.npy'
 LO_file_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/wfs_LO_diff.npy'
 wfs_shape = (48, 48)
 
@@ -59,7 +59,7 @@ sbm = ScoreModel(net, sigma_min=1e-3, sigma_max=1100)
 # plt.show()
 
 # %%
-checkpoint_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/cp_unconditional'
+checkpoint_dir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets/thesis_model'
 
 sbm.fit(dataset, learning_rate=1e-4, epochs=100000, batch_size=16,\
         checkpoints=10, checkpoints_directory=checkpoint_dir,\
