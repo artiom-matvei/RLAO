@@ -111,7 +111,7 @@ class OOPAO(gym.Env):
             )
         
         self.args.modulation = 3
-        self.args.delay = 2
+        self.args.delay = 0
         self.args.nLoop = 500
 
         self.current_steps = 0
@@ -175,7 +175,8 @@ class OOPAO(gym.Env):
         for i in range(self.args.nModes):
             self.obs_history[0, i] = dm_shape_modal[i] * self.scale_up
 
-        obs = torch.cat((slopes.unsqueeze(0), self.obs_history), 0)
+        # obs = torch.cat((slopes.unsqueeze(0), self.obs_history), 0)
+        obs = slopes - 1
 
         strehl = self.get_strehl()
         self.SR.append(strehl)
