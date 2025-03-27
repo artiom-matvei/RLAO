@@ -122,8 +122,8 @@ class SoftQNetwork(nn.Module):
         return x
 
 
-LOG_STD_MAX = -2
-LOG_STD_MIN = -10
+LOG_STD_MAX = 2
+LOG_STD_MIN = -5
 
 
 class Actor(nn.Module):
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"low_std_run_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"cst_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
