@@ -44,20 +44,20 @@ env = get_env(args)
 
 #%%
 
-M2OPD = make_M2OPD(env)
-
-OPD2M = np.linalg.pinv(M2OPD)
+m2opd = np.load(os.path.dirname(__file__)+'/wf_recon/M2OPD_500modes.npy')
+opd2m = np.linalg.pinv(m2opd)
+m2c   = np.load(os.path.dirname(__file__)+'/wf_recon/M2C_357modes.npy')
 xpupil, ypupil = np.where(env.tel.pupil == 1)
 
 path = '/home/parker09/projects/def-lplevass/parker09/RLAO/logs/can_delete/integrator/20240926-093309_test_40s_r0_0.13_ws_[10, 12, 11, 15, 20]_gain_0.9/OPD_frames_500.npy'
 
-pwr_OL, fit_OL = zernike_dist(env, M2OPD, full_fit=True)
+pwr_OL, fit_OL = zernike_dist(env, m2opd, full_fit=True)
 
 # pwr_CL, fit_CL = zernike_dist(env, M2OPD, path)
 
 # mid = np.logspace(np.log10(fit_CL), np.log10(fit_OL), 3)
 # %%
-tag = 'diff'
+tag = 'thesis'
 size = 400000
 
 savedir = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/diffusion/datasets'
@@ -73,6 +73,7 @@ wfs_HO = np.memmap(savedir+f'/wfs_HO_{tag}.npy', dtype='float32', mode='w+', \
                                             shape=(size, *env.wfs.cam.frame.shape))
 
 frame = 0
+nModes = 30
 
 start = time.time()
 
@@ -96,10 +97,10 @@ for j in range(size):
     wfs_HO[frame] = np.float32(env.wfs.cam.frame.copy())
     # dm_commands[frame] = np.float32(command.copy())
 
-    modal_coefs = np.matmul(OPD2M, opd[xpupil, ypupil])
+    modal_coefs = np.matmul(opd2m, opd[xpupil, ypupil])
 
     opd_fit = np.zeros_like(opd)
-    opd_fit[xpupil, ypupil] = M2OPD[:, :50]@modal_coefs[:50]
+    opd_fit[xpupil, ypupil] = m2opd[:, :nModes]@modal_coefs[:nModes]
 
     env.tel.OPD = opd_fit
 

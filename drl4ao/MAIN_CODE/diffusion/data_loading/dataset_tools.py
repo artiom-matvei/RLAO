@@ -55,7 +55,7 @@ class uncondDataset(Dataset):
 
         HO_image = self.HO_data[idx]
         
-        HO_image = torch.tensor(HO_image, dtype=torch.float32)
+        HO_image = torch.from_numpy(HO_image).float()
 
         reshaped_HO = HO_image.view(2, 24, 2, 24).permute(0, 2, 1, 3).contiguous().view(4, 24, 24)
 

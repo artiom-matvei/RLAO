@@ -50,7 +50,7 @@ def plot_tensorboard_scalars(logdir):
     for exp_name, tags in scalar_data.items():
         if "CL_OOPAO" not in exp_name:
             continue  # Only process experiments containing specific keywords
-        elif "optuna_CL_low_std" not in exp_name:
+        elif "scaled_IM" not in exp_name:
             continue
         
         else:
