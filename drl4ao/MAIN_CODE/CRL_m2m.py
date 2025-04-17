@@ -164,7 +164,7 @@ class Actor(nn.Module):
         )
 
         # Learnable residual scaling factor
-        self.residual_scale = nn.Parameter(1e-5 * torch.ones(1))  # Initialized to 1.0
+        self.residual_scale = nn.Parameter(1e-4 * torch.ones(1))  # Initialized to 1.0
 
 
         # self.fc_mean = nn.Linear(64, np.prod(env.single_action_space.shape))
@@ -311,7 +311,7 @@ if __name__ == "__main__":
                     print(f"WARMUP: {global_step}/{int(args.learning_starts)}")
                 # actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 # Warmup with IM actions
-                actions = np.array([-1 * (obs[0][i] + 1) for i in range(envs.num_envs)])
+                actions = np.array([-1 * (obs[0][i]) for i in range(envs.num_envs)])
             else:
                 actions, _, _ = actor.get_action(torch.Tensor(obs).to(device))
                 actions = actions.detach().cpu().numpy()
@@ -323,6 +323,8 @@ if __name__ == "__main__":
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                    with open("CRL_m2m/train_returns.txt", "a") as f:  # 'a' mode appends to the file
+                        f.write(f"global_step={global_step}, episodic_return={info['episode']['r']} \n")
                     writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                     writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                     break
