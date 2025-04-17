@@ -36,7 +36,7 @@ env = get_env(args)
 #%%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-size = int(1e3)
+size = int(3e3)
 
 dm_commands = np.zeros(shape=(size, *env.dm.coefs.shape), dtype='float32')
 wfs_frames = np.zeros(shape=(size, *env.wfs.cam.frame.shape), dtype='float32')
@@ -84,11 +84,11 @@ reconstructor_filt.load_state_dict(checkpoint_filt['model_state_dict'])
 reconstructor_filt.eval()
 
 with torch.no_grad():
-    reshaped_wfs = torch.from_numpy(wfs_frames).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
+    reshaped_wfs = torch.from_numpy(wfs_frames).view(size, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(size, 4, 24, 24)
     pred_filt = reconstructor_filt(reshaped_wfs).squeeze(1)
 
 with torch.no_grad():
-    reshaped_wfs = torch.from_numpy(gaussian_filter(wfs_frames, sigma=0.4, axes=(1,2))).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
+    reshaped_wfs = torch.from_numpy(gaussian_filter(wfs_frames, sigma=0.4, axes=(1,2))).view(size, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(size, 4, 24, 24)
     pred_filt_blurred = reconstructor_filt(reshaped_wfs).squeeze(1)
 
 checkpoint_full = torch.load(savedir+'/models/thesis_models/atmos.pt',map_location=device)
@@ -98,7 +98,7 @@ reconstructor_full.load_state_dict(checkpoint_full['model_state_dict'])
 reconstructor_full.eval()
 
 with torch.no_grad():
-    reshaped_wfs = torch.from_numpy(wfs_frames).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
+    reshaped_wfs = torch.from_numpy(wfs_frames).view(size, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(size, 4, 24, 24)
     pred_full = reconstructor_full(reshaped_wfs).squeeze(1)
 
 
@@ -109,7 +109,7 @@ reconstructor_aug.load_state_dict(checkpoint_aug['model_state_dict'])
 reconstructor_aug.eval()
 
 with torch.no_grad():
-    reshaped_wfs = torch.from_numpy(wfs_frames).view(1000, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(1000, 4, 24, 24)
+    reshaped_wfs = torch.from_numpy(wfs_frames).view(size, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(size, 4, 24, 24)
     pred_aug = reconstructor_aug(reshaped_wfs).squeeze(1)
 
 
