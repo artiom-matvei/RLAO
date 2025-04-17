@@ -16,7 +16,7 @@ steps = 1000
 
 # === Load model ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = ScoreModel(checkpoints_directory= base_dir + '/datasets/checkpoints2/', device=device)
+model = ScoreModel(checkpoints_directory= base_dir + '/datasets/thesis_model_conditional/', device=device)
 model.eval()
 
 # === Prepare input and output memmaps ===
