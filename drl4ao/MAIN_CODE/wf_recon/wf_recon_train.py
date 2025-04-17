@@ -42,7 +42,7 @@ savedir = os.path.dirname(__file__)
 env = get_env(args)
 
 
-with open("thesis_retrain.txt", "a") as f:
+with open("thesis_augmented2.txt", "a") as f:
     f.write(f"Done making env \n")
 
 
@@ -123,7 +123,7 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_atm.npy'
+input_file_path = data_dir_path+'/wfs_frames_augmented.npy'
 target_file_path = data_dir_path+'/dm_cmds.npy'
 
 dm_shape = env.dm.coefs.shape
@@ -133,7 +133,7 @@ D_train = FileDataset(input_file_path, target_file_path, train_indices, dm_shape
 D_test = FileDataset(input_file_path, target_file_path, test_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=ds_size)
 D_val = FileDataset(input_file_path, target_file_path, val_indices, dm_shape=dm_shape, wfs_shape=wfs_shape, size=ds_size)
 
-with open("thesis_retrain.txt", "a") as f:  # 'a' mode appends to the file
+with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Done making train, test, val datasets \n")
 
 # %%
@@ -171,7 +171,7 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/thesis_models/atmos.pt'  # Path to save the best model
+save_path = savedir+'/models/thesis_models/augmented2.pt'  # Path to save the best model
 
 
 # Parameters
@@ -188,7 +188,7 @@ weight_matrix = weight_matrix.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, height,
 # weight_matrix = weight_matrix.expand(batch_size, channels, height, width)
 
 
-with open("thesis_retrain.txt", "a") as f:  # 'a' mode appends to the file
+with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
     f.write(f"Starting Training \n")
 
 
@@ -235,7 +235,7 @@ for epoch in range(n_epochs):
 
     end_tr = time.time()
 
-    with open("thesis_retrain.txt", "a") as f:  # 'a' mode appends to the file
+    with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One training epoch took {end_tr - start} seconds\n")
 
 
@@ -274,7 +274,7 @@ for epoch in range(n_epochs):
     # avg_ema_val_loss = ema_val_loss/len(val_loader)
     # ema_val_losses.append(avg_ema_val_loss)
 
-    with open("thesis_retrain.txt", "a") as f:  # 'a' mode appends to the file
+    with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"One validation epoch took {time.time() - end_tr} seconds\n")
 
 
@@ -291,13 +291,13 @@ for epoch in range(n_epochs):
             'val_loss': best_val_loss,
         }, save_path)
 
-    with open("thesis_retrain.txt", "a") as f:  # 'a' mode appends to the file
+    with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
         f.write(f"Epoch {epoch + 1}/{n_epochs}, Loss: {avg_val_loss}\n")
 
     print(f'Epoch {epoch+1}/{n_epochs}, Validation Loss: {avg_val_loss}')
 
-    np.save(savedir+'/losses/train_loss_thesis_retrain_atm', train_losses)
-    np.save(savedir+'/losses/val_loss_thesis_retrain_atm', val_losses)
+    np.save(savedir+'/losses/train_loss_thesis_augmented2_atm', train_losses)
+    np.save(savedir+'/losses/val_loss_thesis_augmented2_atm', val_losses)
 
 
 # Test phase (after all epochs)
