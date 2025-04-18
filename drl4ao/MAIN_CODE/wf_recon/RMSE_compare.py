@@ -113,6 +113,17 @@ with torch.no_grad():
     pred_aug = reconstructor_aug(reshaped_wfs).squeeze(1)
 
 
+checkpoint_aug2 = torch.load(savedir+'/models/thesis_models/augmented2.pt',map_location=device)
+reconstructor_aug2 = Unet_big(env.xvalid,env.yvalid)
+# Restore the regular model and optimizer state
+reconstructor_aug2.load_state_dict(checkpoint_aug2['model_state_dict'])
+reconstructor_aug2.eval()
+
+with torch.no_grad():
+    reshaped_wfs = torch.from_numpy(wfs_frames).view(size, 2, 24, 2, 24).permute(0,1, 3, 2, 4).contiguous().view(size, 4, 24, 24)
+    pred_aug2 = reconstructor_aug2(reshaped_wfs).squeeze(1)
+
+
 
 lin_pred = np.zeros(shape=(size, *env.dm.coefs.shape), dtype='float32')
 for i in range(size):
@@ -159,11 +170,12 @@ rmse_net_filt = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_filt).deta
 rmse_net_filt_blur = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_filt_blurred).detach().numpy())**2, axis=1))
 rmse_net_full = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_full).detach().numpy())**2, axis=1))
 rmse_net_aug = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_aug).detach().numpy())**2, axis=1))
+rmse_net_aug2 = np.sqrt(np.mean((np.sinh(dm_commands)*1e6  - vec(pred_aug2).detach().numpy())**2, axis=1))
 
 
 plt.figure(figsize=(5, 7))
 # plt.boxplot([rmse_lin,rmse_net_filt, rmse_net_filt_blur, rmse_net_full, rmse_net_aug], labels=['Linear', "NN (Filtered)", "NN (Filtered | Blur)", "NN (Full)", "NN (Augmented)"])
-plt.boxplot([rmse_net_filt, rmse_net_aug, rmse_net_full], labels=["Normal Data", "Augmented Data", "Full Phase"])
+plt.boxplot([rmse_net_filt, rmse_net_aug, rmse_net_aug2, rmse_net_full], labels=["Normal Data", "Augmented Data", "Retrained Diff Model", "Full Phase"])
 plt.ylabel("RMSE")
 plt.title("RMS Reconstruction Error")
 plt.grid(axis='y', linestyle='--', alpha=0.7)

@@ -161,9 +161,9 @@ reconstructor.to(device)
 # ema_reconstructor.to(device)
 
 
-train_loader = DataLoader(D_train, batch_size=128, shuffle=True)
-val_loader = DataLoader(D_val, batch_size=128, shuffle=True)
-test_loader = DataLoader(D_test, batch_size=128, shuffle=False)
+train_loader = DataLoader(D_train, batch_size=64, shuffle=True)
+val_loader = DataLoader(D_val, batch_size=64, shuffle=True)
+test_loader = DataLoader(D_test, batch_size=64, shuffle=False)
 
 
 train_losses = []
@@ -193,7 +193,7 @@ with open("thesis_augmented2.txt", "a") as f:  # 'a' mode appends to the file
 
 
 
-n_epochs = 100
+n_epochs = 300
 for epoch in range(n_epochs):
 
     start = time.time()
