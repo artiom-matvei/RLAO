@@ -41,8 +41,8 @@ class FileDataset(Dataset):
         self.wfs_shape = wfs_shape
 
         if use_mmap:
-            self.input_data = np.memmap(self.input_file_path, dtype='float32', mode='r', shape=(self.size, *self.wfs_shape))[self.split_indices]
-            self.target_data = np.memmap(self.target_file_path, dtype='float32', mode='r',shape=(self.size, *self.dm_shape) )[self.split_indices]
+            self.input_data = np.memmap(self.input_file_path, dtype='float32', mode='r', shape=(self.size, *self.wfs_shape))
+            self.target_data = np.memmap(self.target_file_path, dtype='float32', mode='r',shape=(self.size, *self.dm_shape))
         else:
             self.input_data = np.load(self.input_file_path)[self.split_indices]
             self.target_data = np.load(self.target_file_path)[self.split_indices]
@@ -52,8 +52,9 @@ class FileDataset(Dataset):
 
     def __getitem__(self, idx):
         # Load input image and target from the dataframe
-        input_image = self.input_data[idx]
-        target_image = self.target_data[idx]
+        real_idx = self.split_indices[idx]
+        input_image = self.input_data[real_idx]
+        target_image = self.target_data[real_idx]
         
         # Convert to float and apply any transformations (like normalization)
         # input_image = torch.tensor(input_image, dtype=torch.float32).unsqueeze(0)
