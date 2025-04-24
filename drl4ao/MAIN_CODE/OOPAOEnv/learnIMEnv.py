@@ -127,12 +127,14 @@ class OOPAO(gym.Env):
 
         self.dm.coefs = 0
         self.dm_prev = self.dm.coefs.copy()
-        self.atm.generateNewPhaseScreen(seed = np.random.randint(1e9))
+
+        if seed is None:
+            seed = np.random.randint(1e9)
+        self.atm.generateNewPhaseScreen(seed = seed)
         self.tel*self.wfs
 
         slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         slopes *= self.scale_up
-
         obs = slopes
 
         info = {}
