@@ -22,7 +22,7 @@ class OOPAO(gym.Env):
     def __init__(self, T=5, seed=0):
 
         # Load in configuration file
-        self.conf_path = 'Conf/papyrus_config.yaml'
+        self.conf_path = os.path.dirname(os.path.abspath(__file__)) + '/../Conf/papyrus_config.yaml'
         
         with open(self.conf_path, 'r') as file:
             conf = yaml.safe_load(file)
