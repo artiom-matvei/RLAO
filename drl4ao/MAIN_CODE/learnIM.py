@@ -122,7 +122,7 @@ class SoftQNetwork(nn.Module):
 
 
 LOG_STD_MAX = 2
-LOG_STD_MIN = -5
+LOG_STD_MIN = -10
 
 
 class Actor(nn.Module):
