@@ -53,7 +53,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 1e3
+    learning_starts: int = 5e4
     """timestep to start learning"""
     policy_lr: float = 0.000383
     """the learning rate of the policy network optimizer"""
