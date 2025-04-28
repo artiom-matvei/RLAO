@@ -12,6 +12,7 @@ saved_filters/
 *.pt
 *.mp4
 *.gif
+*.pth
 
 *.txt
 
