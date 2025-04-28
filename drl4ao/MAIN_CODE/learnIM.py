@@ -55,9 +55,9 @@ class Args:
     """the batch size of sample from the reply memory"""
     learning_starts: int = 5e4
     """timestep to start learning"""
-    policy_lr: float = 0.000383
+    policy_lr: float = 0.00001
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 0.00088
+    q_lr: float = 0.001
     """the learning rate of the Q network network optimizer"""
     policy_frequency: int = 2
     """the frequency of training policy (delayed)"""
@@ -147,6 +147,19 @@ class Actor(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
+
+        # Initialize the fc_mean to roughly -Identity
+        def init_weights(m):
+            if isinstance(m, nn.Linear):
+                nn.init.zeros_(m.bias)
+                if m.out_features == m.in_features:
+                    nn.init.eye_(m.weight)
+                    m.weight.data = -0.01 * m.weight.data
+                else:
+                    nn.init.xavier_uniform_(m.weight)
+
+        self.fc_mean.apply(init_weights)
+
 
         self.fc_logstd = nn.Sequential(
             nn.Linear(self.hidden_dim, 128),

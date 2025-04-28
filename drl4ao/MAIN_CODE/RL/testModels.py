@@ -5,18 +5,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 import random
 import time
-from dataclasses import dataclass
-
 import matplotlib.pyplot as plt
 import gymnasium as gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import tyro
-from stable_baselines3.common.buffers import ReplayBuffer
-from torch.utils.tensorboard import SummaryWriter
+
 from OOPAOEnv.learnIMEnv import OOPAO
 from learnIM import Actor
 
@@ -33,7 +26,7 @@ envs = gym.vector.SyncVectorEnv([make_env()])
 
 actor = Actor(envs)
 
-actor.load_state_dict(torch.load("./models/best_model.pth")["model_state_dict"])
+actor.load_state_dict(torch.load("./models/best_model.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 # Residuals with turbulence
 
@@ -127,6 +120,31 @@ fig.text(0.04, 0.5, r'Residuals $(\lambda/D)$', va='center', rotation='vertical'
 plt.xlabel("Iteration")
 
 plt.tight_layout(rect=[0.05, 0.05, 1, 0.97])
+plt.show()
+
+# %%
+
+from scipy.signal import welch
+
+# Sampling frequency in Hz (adjust this to match your real system)
+fs = 500  # For example, 1000 Hz
+
+# Calculate the Power Spectral Density using Welch's method
+f_rl, psd_rl = welch(rl, fs=fs, nperseg=256)
+f_int, psd_int = welch(integrator, fs=fs, nperseg=256)
+f_nc, psd_nc = welch(no_correction, fs=fs, nperseg=256)
+
+# Plot the PSDs
+plt.figure(figsize=(7, 5))
+plt.loglog(f_rl, psd_rl, label="RL", color="orangered", linewidth=2)
+plt.loglog(f_int, psd_int, label="Integrator", color="navy", linewidth=2)
+plt.loglog(f_nc, psd_nc, label="No correction", color="black", linewidth=2)
+
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("Power Spectral Density")
+plt.legend()
+# plt.grid(True, which="both", ls="--", alpha=0.5)
+plt.tight_layout()
 plt.show()
 
 # %%
