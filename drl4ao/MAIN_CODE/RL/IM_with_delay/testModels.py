@@ -29,6 +29,8 @@ actor = Actor(envs)
 
 actor.load_state_dict(torch.load("../models/best_model_delay_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
+burn_in = 200
+
 # Residuals with turbulence
 
 # Reset the environment
@@ -38,60 +40,66 @@ obs, info = env.reset(seed=0)
 residuals_turbulence = []
 
 # Start the loop
-for i in range(env.args.nLoop + 50):
+for i in range(env.args.nLoop + burn_in):
     # Take a step in the environment
     obs, reward, terminated, truncated, info = env.step(np.zeros_like(info["tt_modes"]))
 
-    residuals_turbulence.append(info["tt_modes"][0])
+    if i >= burn_in:
+        residuals_turbulence.append(info["tt_modes"][0])
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop + 50}")
+        print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
 
 # Residuals with integrator
 
 # Reset the environment
+env.gainCL = 0.65
 obs, info = env.reset(seed=0)
 
 residuals_integrator = []
 rmse_integrator = []
 # Start the loop
-for i in range(env.args.nLoop + 50):
+for i in range(env.args.nLoop + burn_in):
     #Integrator action
     integrator_action = info["tt_modes"]
     action = -1 * integrator_action
     # Take a step in the environment
     obs, reward, terminated, truncated, info = env.step(action)
 
-    residuals_integrator.append(info["tt_modes"][0])
-    rmse_integrator.append(np.sqrt(-reward))
+
+    if i >= burn_in:
+        residuals_integrator.append(info["tt_modes"][0])
+        rmse_integrator.append(np.sqrt(-reward))
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop + 50}")
+        print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
 
 # Residuals with actor
+env.gainCL = 0.5
 
 obs, info = env.reset(seed=0)
 residuals_actor = []
 rmse_actor = []
 
 # Start the loop
-for i in range(env.args.nLoop + 50):
+for i in range(env.args.nLoop + burn_in):
     # Take a step in the environment
     actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
 
     obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
 
-    residuals_actor.append(info["tt_modes"][0])
-    rmse_actor.append(np.sqrt(-reward))
+    if i >= burn_in:
+        residuals_actor.append(info["tt_modes"][0])
+        rmse_actor.append(np.sqrt(-reward))
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop + 50}")
+        print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
 
 
 
 # %%
 
-x = np.arange(env.args.nLoop + 50)
+x = np.arange(env.args.nLoop)
 rl = residuals_actor 
 integrator = residuals_integrator
 no_correction = residuals_turbulence
@@ -137,9 +145,9 @@ from scipy.signal import welch
 fs = 500  # For example, 1000 Hz
 
 # Calculate the Power Spectral Density using Welch's method
-f_rl, psd_rl = welch(rl[50:], fs=fs, nperseg=256)
-f_int, psd_int = welch(integrator[50:], fs=fs, nperseg=256)
-f_nc, psd_nc = welch(no_correction[50:], fs=fs, nperseg=256)
+f_rl, psd_rl = welch(rl, fs=fs, nperseg=256)
+f_int, psd_int = welch(integrator, fs=fs, nperseg=256)
+f_nc, psd_nc = welch(no_correction, fs=fs, nperseg=256)
 
 # Plot the PSDs
 plt.figure(figsize=(7, 5))
@@ -167,13 +175,13 @@ q3_2 = np.percentile(rmse_actor, 75, axis=0)
 
 # Plotting
 plt.figure(figsize=(10, 6))
-plt.plot([50, 550], [median1, median1],color='navy', alpha=0.7, label='Integrator RMSE')
-plt.plot(x[50:], rmse_integrator[50:], color='navy', alpha=0.1)  # Optional: plot all RMSE values for integrator
-plt.fill_between(x[50:], q1_1, q3_1, alpha=0.3, label='Integrator IQR')
+plt.plot([0, 500], [median1, median1],color='navy', alpha=0.7, label='Integrator RMSE')
+plt.plot(x, rmse_integrator, color='navy', alpha=0.1)  # Optional: plot all RMSE values for integrator
+plt.fill_between(x, q1_1, q3_1, alpha=0.3, label='Integrator IQR')
 
-plt.plot([50, 550], [median2, median2], color='orangered', alpha=0.7, label='Network RMSE')
-plt.plot(x[50:], rmse_actor[50:], color='orangered', alpha=0.1)  # Optional: plot all RMSE values for network
-plt.fill_between(x[50:], q1_2, q3_2, alpha=0.3, label='Network IQR')
+plt.plot([0, 500], [median2, median2], color='orangered', alpha=0.7, label='Network RMSE')
+plt.plot(x, rmse_actor, color='orangered', alpha=0.1)  # Optional: plot all RMSE values for network
+plt.fill_between(x, q1_2, q3_2, alpha=0.3, label='Network IQR')
 
 plt.xlabel('Iteration')
 plt.ylabel('RMSE')

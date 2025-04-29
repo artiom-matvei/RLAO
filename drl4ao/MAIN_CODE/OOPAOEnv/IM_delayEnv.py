@@ -164,7 +164,7 @@ class OOPAO(gym.Env):
         self.action_buffer.append(action_tensor)
         delayed_action = self.action_buffer.pop(0)
 
-        action4DM = self.M2C_tt.cpu().numpy() @ action_tensor.cpu().numpy() * self.scale_down
+        action4DM = self.M2C_tt.cpu().numpy() @ delayed_action.cpu().numpy() * self.scale_down
 
         self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action4DM) * self.gainCL
         self.dm_prev = self.dm.coefs.copy()
@@ -193,7 +193,7 @@ class OOPAO(gym.Env):
         reward = -np.linalg.norm(tt_modes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
         # reward = np.clip(reward, -1, 1)
 
-        info = {"tt_modes": tt_modes.cpu().numpy() , "strehl":strehl}
+        info = {"tt_modes": tt_modes.cpu().numpy(), "dm_shape": dm_shape_modal ,"strehl":strehl}
         terminated = 0
 
         if done:
