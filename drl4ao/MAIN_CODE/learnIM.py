@@ -53,7 +53,7 @@ class Args:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 5e4
+    learning_starts: int = 1e3
     """timestep to start learning"""
     policy_lr: float = 0.00001
     """the learning rate of the policy network optimizer"""
@@ -102,12 +102,12 @@ class SoftQNetwork(nn.Module):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
-        self.n = self.env.get_attr("n")[0]
+        self.n = 664#self.env.get_attr("n")[0]
 
         self.hidden_dim = hidden_dim
 
         self.net = nn.Sequential(
-            nn.Linear(self.n * 2, self.hidden_dim),
+            nn.Linear(self.n + 2, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
@@ -130,7 +130,7 @@ class Actor(nn.Module):
         super().__init__()
 
         self.env = env
-        self.n = self.env.get_attr("n")[0]
+        self.n = 664 #self.env.get_attr("n")[0]
         self.hidden_dim = hidden_dim
 
         self.net = nn.Sequential(
@@ -147,18 +147,6 @@ class Actor(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(128, np.prod(env.single_action_space.shape))
         )
-
-        # Initialize the fc_mean to roughly -Identity
-        def init_weights(m):
-            if isinstance(m, nn.Linear):
-                nn.init.zeros_(m.bias)
-                if m.out_features == m.in_features:
-                    nn.init.eye_(m.weight)
-                    m.weight.data = -0.01 * m.weight.data
-                else:
-                    nn.init.xavier_uniform_(m.weight)
-
-        self.fc_mean.apply(init_weights)
 
 
         self.fc_logstd = nn.Sequential(
@@ -199,15 +187,15 @@ class Actor(nn.Module):
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
-        y_t = torch.tanh(x_t) # REMOVING TANH HERE
+        # y_t = torch.tanh(x_t) # REMOVING TANH HERE
         # y_t = x_t
 
         base_action = -1 * x
-        residual_action = y_t * self.action_scale + self.action_bias
+        residual_action = x_t * self.action_scale + self.action_bias
 
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
-        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
+        # log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
 
@@ -239,7 +227,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"id_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"test_wfs_obs_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
@@ -311,9 +299,9 @@ if __name__ == "__main__":
             if global_step < args.learning_starts:
                 if global_step % 100 == 0:
                     print(f"WARMUP: {global_step}/{int(args.learning_starts)}")
-                # actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+                actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
                 # Warmup with IM actions
-                actions = np.array([-1 * (obs[i]) for i in range(envs.num_envs)])
+                # actions = np.array([-1 * (obs[i]) for i in range(envs.num_envs)])
             else:
                 actions, _, _ = actor.get_action(torch.Tensor(obs).to(device))
                 actions = actions.detach().cpu().numpy()
@@ -336,8 +324,9 @@ if __name__ == "__main__":
                                     # 'ema_model_state_dict': ema_reconstructor.module.state_dict(),
                                     'optimizer_state_dict': actor_optimizer.state_dict(),
                                     'reward': best_reward,
-                                }, os.path.dirname(__file__) + "/RL/models/best_model.pth")
-                        
+                                }, os.path.dirname(__file__) + f"/RL/models/best_model_run_{i}.pth")
+                        with open("CRL_m2m/train_returns.txt", "a") as f:  # 'a' mode appends to the file
+                            f.write(f"Saving Model \n")
 
                     writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                     writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)

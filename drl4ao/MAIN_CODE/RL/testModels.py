@@ -36,14 +36,14 @@ obs, info = env.reset(seed=0)
 
 residuals_turbulence = []
 # Start the loop
-for i in range(env.args.nLoop):
+for i in range(env.args.nLoop + 50):
     # Take a step in the environment
-    obs, reward, terminated, truncated, info = env.step(np.zeros_like(obs))
+    obs, reward, terminated, truncated, info = env.step(np.zeros_like(info["tt_modes"]))
 
     residuals_turbulence.append(obs[0])
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop}")
+        print(f"Step {i + 1}/{env.args.nLoop + 50}")
 
 # Residuals with integrator
 
@@ -52,16 +52,17 @@ obs, info = env.reset(seed=0)
 
 residuals_integrator = []
 # Start the loop
-for i in range(env.args.nLoop):
+for i in range(env.args.nLoop + 50):
     #Integrator action
-    action = -1 * obs
+    integrator_action = info["tt_modes"]
+    action = -1 * integrator_action
     # Take a step in the environment
     obs, reward, terminated, truncated, info = env.step(action)
 
-    residuals_integrator.append(obs[0])
+    residuals_integrator.append(info["tt_modes"][0])
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop}")
+        print(f"Step {i + 1}/{env.args.nLoop + 50}")
 
 # Residuals with actor
 
@@ -69,22 +70,22 @@ obs, info = env.reset(seed=0)
 residuals_actor = []
 
 # Start the loop
-for i in range(env.args.nLoop):
+for i in range(env.args.nLoop + 50):
     # Take a step in the environment
     actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
 
-    residuals_actor.append(obs[0])
+    residuals_actor.append(info["tt_modes"][0])
 
     if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop}")
+        print(f"Step {i + 1}/{env.args.nLoop + 50}")
 
 
 
 # %%
 
-x = np.arange(env.args.nLoop)
+x = np.arange(env.args.nLoop + 50)
 rl = residuals_actor 
 integrator = residuals_integrator
 no_correction = residuals_turbulence
@@ -96,22 +97,22 @@ fig, axs = plt.subplots(3, 1, figsize=(10, 5), sharex=True)
 axs[0].plot(x, rl, color='orangered', linewidth=2)
 axs[0].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[0].set_title("RL agent")
-axs[0].set_ylim(-0.2, 0.2)
-axs[0].set_xlim(0, env.args.nLoop)
+axs[0].set_ylim(-0.05, 0.05)
+axs[0].set_xlim(0, env.args.nLoop + 50)
 
 # Integrator
 axs[1].plot(x, integrator, color='navy', linewidth=2)
 axs[1].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[1].set_title("Integrator")
-axs[1].set_ylim(-0.2, 0.2)
-axs[1].set_xlim(0, env.args.nLoop)
+axs[1].set_ylim(-0.05, 0.05)
+axs[1].set_xlim(0, env.args.nLoop + 50)
 
 # No correction
 axs[2].plot(x, no_correction, color='black', linewidth=2)
 axs[2].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[2].set_title("No correction")
-axs[2].set_ylim(-0.2, 0.2)
-axs[2].set_xlim(0, env.args.nLoop)
+axs[2].set_ylim(-1, 1)
+axs[2].set_xlim(0, env.args.nLoop + 50)
 
 # Shared y-axis label
 fig.text(0.04, 0.5, r'Residuals $(\lambda/D)$', va='center', rotation='vertical', fontsize=12)
@@ -130,9 +131,9 @@ from scipy.signal import welch
 fs = 500  # For example, 1000 Hz
 
 # Calculate the Power Spectral Density using Welch's method
-f_rl, psd_rl = welch(rl, fs=fs, nperseg=256)
-f_int, psd_int = welch(integrator, fs=fs, nperseg=256)
-f_nc, psd_nc = welch(no_correction, fs=fs, nperseg=256)
+f_rl, psd_rl = welch(rl[50:], fs=fs, nperseg=256)
+f_int, psd_int = welch(integrator[50:], fs=fs, nperseg=256)
+f_nc, psd_nc = welch(no_correction[50:], fs=fs, nperseg=256)
 
 # Plot the PSDs
 plt.figure(figsize=(7, 5))

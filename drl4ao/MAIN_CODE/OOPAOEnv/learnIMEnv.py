@@ -94,7 +94,7 @@ class OOPAO(gym.Env):
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(self.args.nModes,),
+            shape=(664,),
             dtype=np.float32
             )
         
@@ -106,7 +106,7 @@ class OOPAO(gym.Env):
             )
         
         self.args.modulation = 3
-        self.args.nLoop = 450
+        self.args.nLoop = 500
 
         self.current_steps = 0
 
@@ -133,11 +133,14 @@ class OOPAO(gym.Env):
         self.atm.generateNewPhaseScreen(seed = seed)
         self.tel*self.wfs
 
-        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        slopes *= self.scale_up
+        tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        tt_modes *= self.scale_up
+
+        slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
+
         obs = slopes
 
-        info = {}
+        info = {"tt_modes":tt_modes.cpu().numpy()}
 
         return obs.cpu().numpy(), info
     
@@ -157,8 +160,10 @@ class OOPAO(gym.Env):
         self.tel*self.dm*self.wfs
         self.tel*self.wfs
 
-        slopes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        slopes *= self.scale_up
+        slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
+
+        tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
+        tt_modes *= self.scale_up
 
         obs = slopes
 
@@ -170,10 +175,10 @@ class OOPAO(gym.Env):
         done = self.current_steps >= self.args.nLoop
         truncated = done
        
-        reward = -np.linalg.norm(slopes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
-        reward = np.clip(reward, -1, 1)
+        reward = -np.linalg.norm(tt_modes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
+        # reward = np.clip(reward, -1, 1)
 
-        info = {"strehl":strehl}
+        info = {"tt_modes": tt_modes.cpu().numpy() , "strehl":strehl}
         terminated = 0
 
         if done:
@@ -280,7 +285,7 @@ class OOPAO(gym.Env):
 
         # define a detector with its properties (see Detector class for further documentation)
         self.cam = Detector(integrationTime = self.tel.samplingTime,      # integration time of the detector
-                       photonNoise     = True,                  # enable photon noise
+                       photonNoise     = False,                  # enable photon noise
                        readoutNoise    = 0,                     # readout of the detector in [e-/pixel]
                        QE              = 1,                   # quantum efficiency
                        psf_sampling    = 2,                     # sampling for the PSF computation 2 = Shannon sampling
