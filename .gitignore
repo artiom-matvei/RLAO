@@ -1,6 +1,7 @@
 logs/
 docs/
 images/
+datsets/
 ppo_ao_tensorboard/
 SB3/
 README_old.md
@@ -14,7 +15,7 @@ optuna_runs/
 *.mp4
 *.gif
 *.pth
-
+*.zip
 *.txt
 
 losses/
