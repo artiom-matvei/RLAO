@@ -10,8 +10,8 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from OOPAOEnv.learnIMEnv import OOPAO
-from drl4ao.MAIN_CODE.RL.IM_no_delay.learnIM import Actor
+from OOPAOEnv.IM_delayEnv import OOPAO
+from drl4ao.MAIN_CODE.RL.IM_with_delay.IM_delay import Actor
 
 env = OOPAO()
 
@@ -26,7 +26,7 @@ envs = gym.vector.SyncVectorEnv([make_env()])
 
 actor = Actor(envs)
 
-actor.load_state_dict(torch.load("./models/best_model_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
+actor.load_state_dict(torch.load("../models/best_model_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 # Residuals with turbulence
 
