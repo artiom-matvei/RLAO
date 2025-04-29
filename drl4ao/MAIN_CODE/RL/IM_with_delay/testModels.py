@@ -2,6 +2,7 @@
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 import random
 import time
@@ -11,7 +12,7 @@ import numpy as np
 import torch
 
 from OOPAOEnv.IM_delayEnv import OOPAO
-from drl4ao.MAIN_CODE.RL.IM_with_delay.IM_delay import Actor
+from IM_delay import Actor
 
 env = OOPAO()
 
@@ -26,7 +27,7 @@ envs = gym.vector.SyncVectorEnv([make_env()])
 
 actor = Actor(envs)
 
-actor.load_state_dict(torch.load("../models/best_model_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
+actor.load_state_dict(torch.load("../models/best_model_delay_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 # Residuals with turbulence
 

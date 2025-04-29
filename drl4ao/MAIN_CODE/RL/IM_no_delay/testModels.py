@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from OOPAOEnv.learnIMEnv import OOPAO
-from drl4ao.MAIN_CODE.RL.IM_no_delay.learnIM import Actor
+from learnIM import Actor
 
 env = OOPAO()
 
