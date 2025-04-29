@@ -6,6 +6,7 @@ SB3/
 README_old.md
 
 saved_filters/
+optuna_runs/
 
 
 #Saved torch data
