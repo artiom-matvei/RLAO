@@ -238,6 +238,18 @@ def objective(trial):
     # args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
     args.exp_name = "optuna_learnIM_0_delay"
 
+    with open("optuna_runs/args.txt", "a") as f:
+        f.write(f"Trial {trial.number}\n")
+        f.write(f"Gamma: {args.gamma}\n")
+        f.write(f"Tau: {args.tau}\n")
+        f.write(f"Policy LR: {args.policy_lr}\n")
+        f.write(f"Q LR: {args.q_lr}\n")
+        f.write(f"Policy Frequency: {args.policy_frequency}\n")
+        f.write(f"Target Network Frequency: {args.target_network_frequency}\n")
+        f.write(f"Alpha: {args.alpha}\n\n\n")
+
+
+
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         import wandb
@@ -280,6 +292,8 @@ def objective(trial):
     qf2_target.load_state_dict(qf2.state_dict())
     q_optimizer = optim.Adam(list(qf1.parameters()) + list(qf2.parameters()), lr=args.q_lr)
     actor_optimizer = optim.Adam(list(actor.parameters()), lr=args.policy_lr)
+
+    best_reward = -np.inf
 
     # Automatic entropy tuning
     if args.autotune:
@@ -324,6 +338,12 @@ def objective(trial):
 
                 reward_val = info["episode"]["r"]
                 trial.report(reward_val, global_step)
+
+                if reward_val > best_reward:
+                    best_reward = reward_val
+
+                    with open("optuna_runs/args.txt", "a") as f:
+                        f.write(f"Best Reward: {best_reward}\n")
 
                 if trial.should_prune() and global_step > args.learning_starts:
                     raise optuna.exceptions.TrialPruned()
