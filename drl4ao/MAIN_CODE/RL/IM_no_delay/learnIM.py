@@ -48,23 +48,23 @@ class Args:
     """the number of parallel game environments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
-    gamma: float = 0.
+    gamma: float = 0.774826
     """the discount factor gamma"""
-    tau: float = 0.00385
+    tau: float = 0.0197739
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
     learning_starts: int = 1e3
     """timestep to start learning"""
-    policy_lr: float = 0.00001
+    policy_lr: float = 0.000027089
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 0.001
+    q_lr: float = 0.000027365
     """the learning rate of the Q network network optimizer"""
-    policy_frequency: int = 2
+    policy_frequency: int = 10
     """the frequency of training policy (delayed)"""
-    target_network_frequency: int = 3  # Denis Yarats' implementation delays this by 2.
+    target_network_frequency: int = 7  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.01
+    alpha: float = 0.019028
     """Entropy regularization coefficient."""
     autotune: bool = False
     """automatic tuning of the entropy coefficient"""
