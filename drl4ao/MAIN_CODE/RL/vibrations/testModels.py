@@ -42,7 +42,13 @@ residuals_turbulence = []
 # Start the loop
 for i in range(env.args.nLoop + burn_in):
     # Take a step in the environment
-    obs, reward, terminated, truncated, info = env.step(np.zeros_like(info["tt_modes"]))
+    if i == 0:
+        action = -1 * info["tt_modes"]
+
+    else:
+        action = np.zeros_like(info["tt_modes"])
+
+    obs, reward, terminated, truncated, info = env.step(action)
 
     if i >= burn_in:
         residuals_turbulence.append(info["tt_modes"][0])

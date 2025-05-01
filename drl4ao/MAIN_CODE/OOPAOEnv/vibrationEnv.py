@@ -212,7 +212,8 @@ class OOPAO(gym.Env):
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
 
-        print(f"Compted in statement: {np.matmul(self.reconstructor_tt,self.get_slopes())}")
+        print(f"Compted in statement: {np.matmul(self.reconstructor_tt,self.wfs.signal)}")
+        print(f"vibration: {self.vibration[:, self.t]}")
 
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         tt_modes *= self.scale_up
@@ -246,7 +247,7 @@ class OOPAO(gym.Env):
         # self.tel.OPD = tmpOPD
         # self.tel*self.wfs
 
-        print(f"[{self.t} tt_modes[0]: {tt_modes[0].cpu().numpy():.2e} | tt_modes[1]: {tt_modes[1].cpu().numpy():.2e} | computes tt: {np.matmul(self.reconstructor_tt,self.get_slopes())}")
+        # print(f"[{self.t} tt_modes[0]: {tt_modes[0].cpu().numpy():.2e} | tt_modes[1]: {tt_modes[1].cpu().numpy():.2e} | computes tt: {np.matmul(self.reconstructor_tt,self.get_slopes())}")
 
         return obs.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
