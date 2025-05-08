@@ -19,7 +19,7 @@ class OOPAO(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     #--------------------------Core gym funtions--------------------------------
-    def __init__(self, T=5, seed=0, delay=3):
+    def __init__(self, T=5, seed=0):
 
         # Load in configuration file
         self.conf_path = os.path.dirname(os.path.abspath(__file__)) + '/../Conf/papyrus_config.yaml'
@@ -82,24 +82,19 @@ class OOPAO(gym.Env):
         self.nActuator = None
         self.xvalid = None
         self.yvalid = None
-        self.slope_res = 664
 
         self.leak = 0.99
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.network = None
         self.net_gain = 0.5
-        self.scale_down = 1e-7
-        self.scale_up = 1e7
-
-        self.n_history = T
-        self.obs_history = torch.zeros((self.n_history, self.slope_res)).to(self.device)
-       
+        self.scale_down = 1e-6
+        self.scale_up = 1e6
 
         # Spaces
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(self.n_history, self.slope_res),
+            shape=(664,),
             dtype=np.float32
             )
         
@@ -111,25 +106,22 @@ class OOPAO(gym.Env):
             )
         
         self.args.modulation = 3
-        self.args.delay = delay
         self.args.nLoop = 500
 
         self.current_steps = 0
+
+        # Set up vibrations
+        self.vibration = np.zeros((self.args.nModes, self.args.nLoop))
+        self.freq_x1, self.freq_x2, self.freq_x3 = 13, 37, 91
+        self.freq_y1, self.freq_y2, self.freq_y3 = 11,43, 87
+        self.vibration_scale_down = 1e-9
 
 
         # Set the parameters
         self.set_params_file(self.args.param_file,self.args.oopao_path) # set parameter file
         self.set_params(self.args)
 
-        self.xvalid, self.yvalid = np.where(self.tel.pupil == 1)
-        self.d = delay
-        self.action_buffer = [torch.zeros((self.args.nModes)).to(device=self.device, dtype=torch.float32)] * self.d
-
-        # Set up vibrations
-        self.vibration = np.zeros((self.args.nModes, self.args.nLoop))
-        self.freq_x1, self.freq_x2, self.freq_x3 = 13, 37, 91
-        self.freq_y1, self.freq_y2, self.freq_y3 = 11, 43, 87
-
+        self.xvalid_pupil, self.yvalid_pupil = np.where(self.tel.pupil == 1)
 
 
     def reset(self, seed=None, options=None):
@@ -138,14 +130,11 @@ class OOPAO(gym.Env):
         self.t = 0
         self.current_steps = 0
         self.episode_reward_sum = 0  # Initialize in reset
-        self.action_buffer = [torch.zeros((self.args.nModes)).to(device=self.device, dtype=torch.float32)] * self.d
-        self.obs_history = torch.zeros((self.n_history, self.slope_res)).to(self.device)
 
         self.dm.coefs = 0
-        self.dm_prev = self.dm.coefs.copy()
 
-        if seed is None:
-            seed = np.random.randint(1e9)
+        self.corretion_state = np.zeros((self.dm.nValidAct))
+        self.prev_correction_state = np.zeros((self.dm.nValidAct))
 
         # Set up the vibration signals
         time = np.arange(self.args.nLoop * 2) / (self.args.nLoop * 2)
@@ -166,23 +155,17 @@ class OOPAO(gym.Env):
             np.sin(2 * np.pi * self.freq_y3 * time + 2 * np.pi * np.random.rand())
         )
 
-        # Scale down the vibrations
-        self.vibration *= self.scale_down
 
-        # Set the initial frame of OPD
-        tmpOPD = np.zeros_like(self.tel.OPD.copy())
-        tmpOPD[self.xvalid, self.yvalid] = self.M2OPD @ self.vibration[:, self.t]
-        self.tel.OPD = tmpOPD
-        self.tel*self.wfs
-
+        self.vibration_state = self.M2C_tt.cpu().numpy() @ self.vibration[:, self.t] * self.vibration_scale_down
+        self.dm.coefs = self.vibration_state
+        self.tel*self.dm*self.wfs
 
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        tt_modes *= self.scale_up
+        # tt_modes *= self.scale_up
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
-        self.obs_history[0] = slopes
 
-        obs = self.obs_history.clone().detach()
+        obs = slopes
 
         info = {"tt_modes":tt_modes.cpu().numpy()}
 
@@ -194,35 +177,29 @@ class OOPAO(gym.Env):
         self.t += 1
         # Convert action to tensor and apply delay
         action_tensor = torch.tensor(action, device=self.device, dtype=torch.float32)
-        self.action_buffer.append(action_tensor)
-        delayed_action = self.action_buffer.pop(0)
 
-        action4DM = self.M2C_tt.cpu().numpy() @ delayed_action.cpu().numpy() * self.scale_down
+        action4DM = self.M2C_tt.cpu().numpy() @ action_tensor.cpu().numpy()#* self.scale_down
 
-        self.dm.coefs = (self.dm_prev * self.leak) + self.tensor_to_numpy(action4DM) * self.gainCL
-        self.dm_prev = self.dm.coefs.copy()
+        self.correction_state = (self.prev_correction_state * self.leak) + self.tensor_to_numpy(action4DM) * self.gainCL
+        self.prev_correction_state = self.correction_state.copy()
+
         dm_shape_modal = self.C2M_tt @ self.dm.coefs.copy()
 
         # Step the OPD
-        tmpOPD = np.zeros_like(self.tel.OPD.copy())
-        tmpOPD[self.xvalid, self.yvalid] = self.M2OPD @ self.vibration[:, self.t]
-        self.tel.OPD = tmpOPD
-        
+        self.vibration_state = self.M2C_tt.cpu().numpy() @ self.vibration[:, self.t] * self.vibration_scale_down
+
+        print("Vibration state: ", np.linalg.norm(self.vibration_state))
+        print("Correction state: ", np.linalg.norm(self.correction_state))
+
+        self.dm.coefs = self.vibration_state + self.corretion_state
         self.tel*self.dm*self.wfs
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
 
-        print(f"Compted in statement: {np.matmul(self.reconstructor_tt,self.wfs.signal)}")
-        print(f"vibration: {self.vibration[:, self.t]}")
-
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        tt_modes *= self.scale_up
+        # tt_modes *= self.scale_up
 
-        print(f"tt_modes: {tt_modes.cpu().numpy()}")
-
-        self.obs_history = self.roll_buffer(self.obs_history, slopes)
-
-        obs = self.obs_history.clone().detach()
+        obs = slopes
 
         strehl = self.get_strehl()
         self.SR.append(strehl)
@@ -235,19 +212,11 @@ class OOPAO(gym.Env):
         reward = -np.linalg.norm(tt_modes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
         # reward = np.clip(reward, -1, 1)
 
-        info = {"tt_modes": tt_modes.cpu().numpy(), "dm_shape": dm_shape_modal ,"strehl":strehl}
+        info = {"tt_modes": tt_modes.cpu().numpy() , "strehl":strehl}
         terminated = 0
 
         if done:
             self.current_steps = 0
-
-        # Step the OPD
-        # tmpOPD = np.zeros_like(self.tel.OPD.copy())
-        # tmpOPD[self.xvalid, self.yvalid] = self.M2OPD @ self.vibration[:, self.t]
-        # self.tel.OPD = tmpOPD
-        # self.tel*self.wfs
-
-        # print(f"[{self.t} tt_modes[0]: {tt_modes[0].cpu().numpy():.2e} | tt_modes[1]: {tt_modes[1].cpu().numpy():.2e} | computes tt: {np.matmul(self.reconstructor_tt,self.get_slopes())}")
 
         return obs.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
@@ -684,4 +653,3 @@ class OOPAO(gym.Env):
         if isinstance(obj, torch.Tensor):
             return obj.cpu().numpy()
         return obj
-

@@ -23,11 +23,11 @@ def make_env():
         return env
     return thunk
 
-envs = gym.vector.SyncVectorEnv([make_env()])
+# envs = gym.vector.SyncVectorEnv([make_env()])
 
-actor = Actor(envs)
+# actor = Actor(envs)
 
-actor.load_state_dict(torch.load("../models/best_model_vib_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
+# actor.load_state_dict(torch.load("../models/best_model_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 burn_in = 200
 
@@ -42,11 +42,8 @@ residuals_turbulence = []
 # Start the loop
 for i in range(env.args.nLoop + burn_in):
     # Take a step in the environment
-    if i == 0:
-        action = -1 * info["tt_modes"]
 
-    else:
-        action = np.zeros_like(info["tt_modes"])
+    action = np.zeros_like(info["tt_modes"])
 
     obs, reward, terminated, truncated, info = env.step(action)
 
@@ -84,19 +81,19 @@ obs, info = env.reset(seed=0)
 residuals_actor = []
 rmse_actor = []
 
-# Start the loop
-for i in range(env.args.nLoop + burn_in):
-    # Take a step in the environment
-    actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
+# # Start the loop
+# for i in range(env.args.nLoop + burn_in):
+#     # Take a step in the environment
+#     actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
 
-    obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
+#     obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
 
-    if i >= burn_in:
-        residuals_actor.append(info["tt_modes"][0])
-        rmse_actor.append(np.sqrt(-reward))
+#     if i >= burn_in:
+#         residuals_actor.append(info["tt_modes"][0])
+#         rmse_actor.append(np.sqrt(-reward))
 
-    if (i + 1) % 100 == 0:
-        print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
+#     if (i + 1) % 100 == 0:
+#         print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
 
 
 
@@ -109,27 +106,28 @@ no_correction = residuals_turbulence
 
 # Create the figure and subplots
 fig, axs = plt.subplots(3, 1, figsize=(10, 5), sharex=True)
+y_lims = 0.1
 
 # RL agent
-axs[0].plot(x, rl, color='orangered', linewidth=2)
+# axs[0].plot(x, rl, color='orangered', linewidth=2)
 axs[0].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[0].set_title("RL agent")
-axs[0].set_ylim(-0.1, 0.1)
-axs[0].set_xlim(0, env.args.nLoop + 50)
+axs[0].set_ylim(-y_lims, y_lims)
+axs[0].set_xlim(0, env.args.nLoop)
 
 # Integrator
 axs[1].plot(x, integrator, color='navy', linewidth=2)
 axs[1].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[1].set_title("Integrator")
-axs[1].set_ylim(-0.1, 0.1)
-axs[1].set_xlim(0, env.args.nLoop + 50)
+axs[1].set_ylim(-y_lims, y_lims)
+axs[1].set_xlim(0, env.args.nLoop)
 
 # No correction
 axs[2].plot(x, no_correction, color='black', linewidth=2)
 axs[2].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[2].set_title("No correction")
-axs[2].set_ylim(-0.1, 0.1)
-axs[2].set_xlim(0, env.args.nLoop + 50)
+axs[2].set_ylim(-y_lims, y_lims)
+axs[2].set_xlim(0, env.args.nLoop)
 
 # Shared y-axis label
 fig.text(0.04, 0.5, r'Residuals $(\lambda/D)$', va='center', rotation='vertical', fontsize=12)
