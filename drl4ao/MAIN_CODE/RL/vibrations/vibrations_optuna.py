@@ -67,7 +67,7 @@ class Args:
     """the frequency of updates for the target nerworks"""
     alpha: float = 0.01
     """Entropy regularization coefficient."""
-    autotune: bool = False
+    autotune: bool = True
     """automatic tuning of the entropy coefficient"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
@@ -226,7 +226,7 @@ def objective(trial):
         )
 
     args = tyro.cli(Args, args=[])
-    args.gamma = trial.suggest_float("gamma", 0.7, 0.999)
+    args.gamma = trial.suggest_float("gamma", 0.95, 0.999)
     args.tau = trial.suggest_float("tau", 0.001, 0.1, log=True)
     # args.batch_size = trial.suggest_int("batch_size", 32, 256)
     # args.learning_starts = trial.suggest_int("learning_starts", 1000, 10000)
@@ -234,9 +234,9 @@ def objective(trial):
     args.q_lr = trial.suggest_float("q_lr", 1e-5, 1e-3, log=True)
     args.policy_frequency = trial.suggest_int("policy_frequency", 1, 10)
     args.target_network_frequency = trial.suggest_int("target_network_frequency", 1, 10)
-    args.alpha = trial.suggest_float("alpha", 0.01, 0.1, log=True)
+    # args.alpha = trial.suggest_float("alpha", 0.01, 0.1, log=True)
     # args.hidden_dim = trial.suggest_int("hidden_dim", 64, 256)
-    args.exp_name = "optuna_learnIM_0_delay"
+    args.exp_name = "optuna_vib_0_delay"
 
     with open("optuna_runs/args.txt", "a") as f:
         f.write(f"Trial {trial.number}\n")
@@ -297,7 +297,7 @@ def objective(trial):
 
     # Automatic entropy tuning
     if args.autotune:
-        target_entropy = - torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
+        target_entropy = - 0.5 * torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
         log_alpha = torch.zeros(1, requires_grad=True, device=device)
         alpha = log_alpha.exp().item()
         a_optimizer = optim.Adam([log_alpha], lr=args.q_lr)
