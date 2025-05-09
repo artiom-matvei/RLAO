@@ -114,7 +114,7 @@ class OOPAO(gym.Env):
         self.vibration = np.zeros((self.args.nModes, self.args.nLoop))
         self.freq_x1, self.freq_x2, self.freq_x3 = 13, 37, 91
         self.freq_y1, self.freq_y2, self.freq_y3 = 11,43, 87
-        self.vibration_scale_down = 1e-9
+        self.vibration_scale_down = 1e-6
 
 
         # Set the parameters
@@ -133,7 +133,7 @@ class OOPAO(gym.Env):
 
         self.dm.coefs = 0
 
-        self.corretion_state = np.zeros((self.dm.nValidAct))
+        self.correction_state = np.zeros((self.dm.nValidAct))
         self.prev_correction_state = np.zeros((self.dm.nValidAct))
 
         # Set up the vibration signals
@@ -161,7 +161,7 @@ class OOPAO(gym.Env):
         self.tel*self.dm*self.wfs
 
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        # tt_modes *= self.scale_up
+        tt_modes *= self.scale_up
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
 
@@ -178,7 +178,7 @@ class OOPAO(gym.Env):
         # Convert action to tensor and apply delay
         action_tensor = torch.tensor(action, device=self.device, dtype=torch.float32)
 
-        action4DM = self.M2C_tt.cpu().numpy() @ action_tensor.cpu().numpy()#* self.scale_down
+        action4DM = self.M2C_tt.cpu().numpy() @ action_tensor.cpu().numpy() * self.scale_down
 
         self.correction_state = (self.prev_correction_state * self.leak) + self.tensor_to_numpy(action4DM) * self.gainCL
         self.prev_correction_state = self.correction_state.copy()
@@ -188,16 +188,16 @@ class OOPAO(gym.Env):
         # Step the OPD
         self.vibration_state = self.M2C_tt.cpu().numpy() @ self.vibration[:, self.t] * self.vibration_scale_down
 
-        print("Vibration state: ", np.linalg.norm(self.vibration_state))
-        print("Correction state: ", np.linalg.norm(self.correction_state))
+        # print("Vibration state: ", np.linalg.norm(self.vibration_state))
+        # print("Correction state: ", np.linalg.norm(self.correction_state))
 
-        self.dm.coefs = self.vibration_state + self.corretion_state
+        self.dm.coefs = self.vibration_state + self.correction_state
         self.tel*self.dm*self.wfs
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
 
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
-        # tt_modes *= self.scale_up
+        tt_modes *= self.scale_up
 
         obs = slopes
 
@@ -209,7 +209,7 @@ class OOPAO(gym.Env):
         done = self.current_steps >= self.args.nLoop
         truncated = done
        
-        reward = -np.linalg.norm(tt_modes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
+        reward = - 100 * np.linalg.norm(tt_modes.cpu()) ** 2 / self.args.nModes # Normalize by number of signals
         # reward = np.clip(reward, -1, 1)
 
         info = {"tt_modes": tt_modes.cpu().numpy() , "strehl":strehl}
@@ -488,6 +488,8 @@ class OOPAO(gym.Env):
         self.modal_CM = calib_CL.M
         self.C2M_tt = np.linalg.pinv(M2C_CL[:, :self.args.nModes])
         self.F = M2C_CL @ np.linalg.pinv(M2C_CL)   
+
+        self.tel - self.atm
         
         
 

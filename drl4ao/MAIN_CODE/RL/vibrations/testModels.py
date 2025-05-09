@@ -23,11 +23,11 @@ def make_env():
         return env
     return thunk
 
-# envs = gym.vector.SyncVectorEnv([make_env()])
+envs = gym.vector.SyncVectorEnv([make_env()])
 
-# actor = Actor(envs)
+actor = Actor(envs)
 
-# actor.load_state_dict(torch.load("../models/best_model_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
+actor.load_state_dict(torch.load("../models/best_model_vib_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 burn_in = 200
 
@@ -81,19 +81,19 @@ obs, info = env.reset(seed=0)
 residuals_actor = []
 rmse_actor = []
 
-# # Start the loop
-# for i in range(env.args.nLoop + burn_in):
-#     # Take a step in the environment
-#     actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
+# Start the loop
+for i in range(env.args.nLoop + burn_in):
+    # Take a step in the environment
+    actions, _, _ = actor.get_action(torch.Tensor(obs[np.newaxis, :]))
 
-#     obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
+    obs, reward, terminated, truncated, info = env.step(actions[0].detach().numpy())
 
-#     if i >= burn_in:
-#         residuals_actor.append(info["tt_modes"][0])
-#         rmse_actor.append(np.sqrt(-reward))
+    if i >= burn_in:
+        residuals_actor.append(info["tt_modes"][0])
+        rmse_actor.append(np.sqrt(-reward))
 
-#     if (i + 1) % 100 == 0:
-#         print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
+    if (i + 1) % 100 == 0:
+        print(f"Step {i + 1}/{env.args.nLoop + burn_in}")
 
 
 
@@ -106,10 +106,10 @@ no_correction = residuals_turbulence
 
 # Create the figure and subplots
 fig, axs = plt.subplots(3, 1, figsize=(10, 5), sharex=True)
-y_lims = 0.1
+y_lims = 0.01
 
 # RL agent
-# axs[0].plot(x, rl, color='orangered', linewidth=2)
+axs[0].plot(x, rl, color='orangered', linewidth=2)
 axs[0].axhline(0, color='black', linestyle='--', linewidth=1.5)
 axs[0].set_title("RL agent")
 axs[0].set_ylim(-y_lims, y_lims)

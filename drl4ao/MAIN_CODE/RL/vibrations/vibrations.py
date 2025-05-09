@@ -48,25 +48,25 @@ class Args:
     """the number of parallel game environments"""
     buffer_size: int = int(5e4)
     """the replay memory buffer size"""
-    gamma: float = 0.
+    gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 0.00385
+    tau: float = 0.0197739
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
     learning_starts: int = 1e3
     """timestep to start learning"""
-    policy_lr: float = 0.00001
+    policy_lr: float = 0.000027089
     """the learning rate of the policy network optimizer"""
-    q_lr: float = 0.001
+    q_lr: float = 0.000027365
     """the learning rate of the Q network network optimizer"""
-    policy_frequency: int = 2
+    policy_frequency: int = 10
     """the frequency of training policy (delayed)"""
-    target_network_frequency: int = 3  # Denis Yarats' implementation delays this by 2.
+    target_network_frequency: int = 7  # Denis Yarats' implementation delays this by 2.
     """the frequency of updates for the target nerworks"""
-    alpha: float = 0.01
+    alpha: float = 0.2
     """Entropy regularization coefficient."""
-    autotune: bool = False
+    autotune: bool = True
     """automatic tuning of the entropy coefficient"""
     max_grad_norm: float = 0.5
     """the maximum norm for the gradient clipping"""
@@ -104,14 +104,11 @@ class SoftQNetwork(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
         self.n = 664#self.env.get_attr("n")[0]
-        self.T = 5#self.env.get_attr("T")[0]
 
         self.hidden_dim = hidden_dim
 
-        self.input_dim = self.n * self.T + 2
-
         self.net = nn.Sequential(
-            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.Linear(self.n + 2, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
@@ -119,7 +116,7 @@ class SoftQNetwork(nn.Module):
         ) 
 
     def forward(self, x, a):
-        x = torch.cat([x.view(x.shape[0], -1), a], 1)
+        x = torch.cat([x, a], 1)
         x = x.view(x.shape[0], -1)
         x = self.net(x)
         return x
@@ -135,13 +132,14 @@ class Actor(nn.Module):
 
         self.env = env
         self.n = 664 #self.env.get_attr("n")[0]
-        self.T = 5#self.env.get_attr("T")[0]
         self.hidden_dim = hidden_dim
 
-        self.input_dim = self.n * self.T    
-
         self.net = nn.Sequential(
-            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.Linear(self.n, self.hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
@@ -178,15 +176,9 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        batch_size, T, n = x.shape
-        assert n == self.n, f"Expected input last dim {self.n}, got {n}"
-        assert T == self.T, f"Expected input time dim {self.T}, got {T}"
-
-        # Flatten (T, n) into (T * n)
-        x = x.view(batch_size, -1)
-
         x = self.net(x)
-        x = x.view(batch_size, -1)
+        x = x.view(x.shape[0], -1)
+
 
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
@@ -200,14 +192,19 @@ class Actor(nn.Module):
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
+        # y_t = torch.tanh(x_t) # REMOVING TANH HERE
+        # y_t = x_t
 
-
-        action = x_t * self.action_scale + self.action_bias
+        base_action = -1 * x
+        residual_action = x_t * self.action_scale + self.action_bias
 
         log_prob = normal.log_prob(x_t)
-
+        # Enforcing Action Bound
+        # log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
+
+        action = residual_action
 
         # print(f"base_action: {base_action}, {base_action.shape}")
         # print(f"residual_action: {self.residual_scale * residual_action}, {residual_action.shape}")
@@ -235,7 +232,7 @@ if __name__ == "__main__":
     for i in range(num_runs):
 
         args = tyro.cli(Args, args=[])
-        run_name = f"IM_delay_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
+        run_name = f"vib_{args.env_id}__{args.exp_name}__{args.seed}__run_{i}__{int(time.time())}"
         if args.track:
             import wandb
 
@@ -283,7 +280,7 @@ if __name__ == "__main__":
         best_reward = -np.inf
         # Automatic entropy tuning
         if args.autotune:
-            target_entropy = - torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
+            target_entropy = - 0.5 * torch.prod(torch.Tensor(envs.single_action_space.shape).to(device)).item()
             log_alpha = torch.zeros(1, requires_grad=True, device=device)
             alpha = log_alpha.exp().item()
             a_optimizer = optim.Adam([log_alpha], lr=args.q_lr)
