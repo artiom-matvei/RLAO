@@ -27,7 +27,7 @@ envs = gym.vector.SyncVectorEnv([make_env()])
 
 actor = Actor(envs)
 
-actor.load_state_dict(torch.load("../models/best_model_vib_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
+actor.load_state_dict(torch.load("../models/optuna_vib_run_0.pth", map_location=torch.device('cpu'))["model_state_dict"])
 # %%
 burn_in = 200
 
@@ -106,7 +106,7 @@ no_correction = residuals_turbulence
 
 # Create the figure and subplots
 fig, axs = plt.subplots(3, 1, figsize=(10, 5), sharex=True)
-y_lims = 0.01
+y_lims = 0.1
 
 # RL agent
 axs[0].plot(x, rl, color='orangered', linewidth=2)

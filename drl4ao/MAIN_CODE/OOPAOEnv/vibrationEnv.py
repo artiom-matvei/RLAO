@@ -120,7 +120,7 @@ class OOPAO(gym.Env):
         self.vibration = np.zeros((self.args.nModes, self.args.nLoop))
         self.freq_x1, self.freq_x2, self.freq_x3 = 13, 37, 91
         self.freq_y1, self.freq_y2, self.freq_y3 = 11,43, 87
-        self.vibration_scale_down = 1e-6
+        self.vibration_scale_down = 1e-7
 
 
         # Set the parameters
@@ -227,6 +227,7 @@ class OOPAO(gym.Env):
 
         if done:
             self.current_steps = 0
+
 
         return obs.cpu().numpy(), reward, bool(terminated), bool(truncated), info
 
