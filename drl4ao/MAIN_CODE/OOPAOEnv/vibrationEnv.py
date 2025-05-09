@@ -90,11 +90,17 @@ class OOPAO(gym.Env):
         self.scale_down = 1e-6
         self.scale_up = 1e6
 
+        self.slope_res = 664
+
+        self.n_history = T
+        self.obs_history = torch.zeros((self.n_history, self.slope_res)).to(self.device)
+       
+
         # Spaces
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(664,),
+            shape=(self.n_history, self.slope_res),
             dtype=np.float32
             )
         
@@ -130,6 +136,7 @@ class OOPAO(gym.Env):
         self.t = 0
         self.current_steps = 0
         self.episode_reward_sum = 0  # Initialize in reset
+        self.obs_history = torch.zeros((self.n_history, self.slope_res)).to(self.device)
 
         self.dm.coefs = 0
 
@@ -165,7 +172,8 @@ class OOPAO(gym.Env):
 
         slopes = torch.tensor(self.get_slopes(), dtype=torch.float32).to(self.device)
 
-        obs = slopes
+        self.obs_history[0] = slopes
+        obs = self.obs_history.clone().detach()
 
         info = {"tt_modes":tt_modes.cpu().numpy()}
 
@@ -199,7 +207,9 @@ class OOPAO(gym.Env):
         tt_modes = torch.tensor(np.matmul(self.reconstructor_tt,self.get_slopes()), dtype=torch.float32).to(self.device)
         tt_modes *= self.scale_up
 
-        obs = slopes
+        self.obs_history = self.roll_buffer(self.obs_history, slopes)
+
+        obs = self.obs_history.clone().detach()
 
         strehl = self.get_strehl()
         self.SR.append(strehl)

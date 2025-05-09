@@ -104,11 +104,14 @@ class SoftQNetwork(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.env = env
         self.n = 664#self.env.get_attr("n")[0]
+        self.T = 5#self.env.get_attr("T")[0]
 
         self.hidden_dim = hidden_dim
 
+        self.input_dim = self.n * self.T + 2
+
         self.net = nn.Sequential(
-            nn.Linear(self.n + 2, self.hidden_dim),
+            nn.Linear(self.input_dim, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
@@ -116,7 +119,7 @@ class SoftQNetwork(nn.Module):
         ) 
 
     def forward(self, x, a):
-        x = torch.cat([x, a], 1)
+        x = torch.cat([x.view(x.shape[0], -1), a], 1)
         x = x.view(x.shape[0], -1)
         x = self.net(x)
         return x
@@ -132,14 +135,13 @@ class Actor(nn.Module):
 
         self.env = env
         self.n = 664 #self.env.get_attr("n")[0]
+        self.T = 5#self.env.get_attr("T")[0]
         self.hidden_dim = hidden_dim
 
+        self.input_dim = self.n * self.T    
+
         self.net = nn.Sequential(
-            nn.Linear(self.n, self.hidden_dim),
-            nn.LeakyReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.LeakyReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.Linear(self.input_dim, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.LeakyReLU(),
@@ -176,9 +178,15 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        x = self.net(x)
-        x = x.view(x.shape[0], -1)
+        batch_size, T, n = x.shape
+        assert n == self.n, f"Expected input last dim {self.n}, got {n}"
+        assert T == self.T, f"Expected input time dim {self.T}, got {T}"
 
+        # Flatten (T, n) into (T * n)
+        x = x.view(batch_size, -1)
+
+        x = self.net(x)
+        x = x.view(batch_size, -1)
 
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
@@ -192,19 +200,14 @@ class Actor(nn.Module):
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
-        # y_t = torch.tanh(x_t) # REMOVING TANH HERE
-        # y_t = x_t
 
-        base_action = -1 * x
-        residual_action = x_t * self.action_scale + self.action_bias
+
+        action = x_t * self.action_scale + self.action_bias
 
         log_prob = normal.log_prob(x_t)
-        # Enforcing Action Bound
-        # log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6) # REMOVE TANH CORRECTION
+
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
-
-        action = residual_action
 
         # print(f"base_action: {base_action}, {base_action.shape}")
         # print(f"residual_action: {self.residual_scale * residual_action}, {residual_action.shape}")

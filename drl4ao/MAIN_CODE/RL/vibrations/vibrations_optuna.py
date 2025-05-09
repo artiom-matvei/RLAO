@@ -339,8 +339,19 @@ def objective(trial):
                 reward_val = info["episode"]["r"]
                 trial.report(reward_val, global_step)
 
-                if reward_val > best_reward:
-                    best_reward = reward_val
+                if info['episode']['r'] > best_reward and global_step > args.learning_starts:
+
+                    best_reward = info['episode']['r']
+                    torch.save({
+                                'epoch': global_step + 1,
+                                'model_state_dict': actor.state_dict(),
+                                # 'ema_model_state_dict': ema_reconstructor.module.state_dict(),
+                                'optimizer_state_dict': actor_optimizer.state_dict(),
+                                'reward': best_reward,
+                            }, os.path.dirname(__file__) + f"/../models/optuna_vib_run_{trial.number}.pth")
+                    with open("./train_returns.txt", "a") as f:  # 'a' mode appends to the file
+                        f.write(f"Saving Model \n")
+
 
                     with open("optuna_runs/args.txt", "a") as f:
                         f.write(f"Best Reward: {best_reward}\n")
