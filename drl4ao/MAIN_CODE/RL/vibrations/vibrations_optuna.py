@@ -198,7 +198,21 @@ class Actor(nn.Module):
 
     def get_action(self, x):
         mean, log_std = self(x)
+
+        # Stabilize log_std
+        if torch.any(torch.isnan(log_std)) or torch.any(torch.isnan(mean)):
+            print("NaNs detected in actor outputs (pre-exp)")
+            print(f"log_std:\n{log_std}")
+            print(f"mean:\n{mean}")
+            raise ValueError("NaNs in actor output")
+
+        log_std = torch.clamp(log_std, min=LOG_STD_MIN, max=LOG_STD_MAX)
         std = log_std.exp()
+
+        if torch.any(torch.isnan(std)):
+            print("NaNs detected in std after exp(log_std)")
+            raise ValueError("NaNs in std")
+
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample() # for reparameterization trick (mean + std * N(0,1))
 
