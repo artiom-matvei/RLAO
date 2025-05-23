@@ -50,21 +50,22 @@ with open("thesis_augmented2.txt", "a") as f:
 
 #------------- Uncomment to make your own dataset locally -------------#
 
-# # Generate the dataset of wfs images and phase maps
-# env.tel.resetOPD()
-# env.tel*env.dm*env.wfs
-# os.makedirs(savedir+'/datasets', exist_ok=True)
-# wfsf, dmc = make_diverse_dataset(env, size=20000, num_scale=1,\
-#                      min_scale=1e-6, max_scale=1e-6, savedir=savedir+'/datasets', tag='big_boy')
+# Generate the dataset of wfs images and phase maps
+env.tel.resetOPD()
+env.tel*env.dm*env.wfs
+os.makedirs(savedir+'/datasets', exist_ok=True)
+#%%
+wfsf, dmc = make_diverse_dataset(env, size=20000, num_scale=1,\
+                     min_scale=1e-6, max_scale=1e-6, savedir=savedir+'/datasets', tag='big_boy')
 
-# X = wfsf
-# y_raw = dmc
+X = wfsf
+y_raw = dmc
 
-# ds_size = len(X)
+ds_size = len(X)
 
-# # Save the dataset
-# np.save(savedir+'/datasets/wfs_frames_bigboy', wfsf)
-# np.save(savedir+'/datasets/dm_cmds_bigboy', dmc)
+# Save the dataset
+np.save(savedir+'/datasets/wfs_frames_bigboy', wfsf)
+np.save(savedir+'/datasets/dm_cmds_bigboy', dmc)
 
 
 #------------- Uncomment to load a dataset from a single file -------------#
@@ -76,13 +77,13 @@ with open("thesis_augmented2.txt", "a") as f:
 
 # ds_size = len(X)
 #------------- Uncomment to load a dataset from individual files -------------#
-
-data_dir_path = '/home/parker09/projects/def-lplevass/parker09/RLAO/drl4ao/MAIN_CODE/wf_recon/datsets/thesis_data'
+#%%
+data_dir_path = f'{savedir}/datasets'
 
 # X = os.listdir(data_dir_path + '/inputs')
 # y = os.listdir(data_dir_path + '/targets')
-
-ds_size = 400000
+#%%
+ds_size = 20000
 
 
 # %%
@@ -124,8 +125,8 @@ test_indices = indices[train_size + val_size:]
 
 
 #------------- Uncomment for datasets from file names -------------#
-input_file_path = data_dir_path+'/wfs_frames_augmented.npy'
-target_file_path = data_dir_path+'/dm_cmds.npy'
+input_file_path = data_dir_path+'/wfs_frames_bigboy.npy'
+target_file_path = data_dir_path+'/dm_cmds_bigboy.npy'
 
 dm_shape = env.dm.coefs.shape
 wfs_shape=env.wfs.cam.frame.shape
@@ -172,7 +173,8 @@ val_losses = []
 ema_val_losses = []
 # Variable to store the best validation loss and path to save the model
 best_val_loss = float('inf')  # Initialize to infinity
-save_path = savedir+'/models/thesis_models/augmented2.pt'  # Path to save the best model
+os.makedirs(savedir+'/models/thesis_models', exist_ok=True)
+save_path = savedir+'/models/thesis_models/bigboy.pt'  # Path to save the best model
 
 
 # Parameters
