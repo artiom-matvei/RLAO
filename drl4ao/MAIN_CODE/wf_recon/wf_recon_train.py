@@ -53,11 +53,12 @@ with open("thesis_augmented2.txt", "a") as f:
 # # Generate the dataset of wfs images and phase maps
 # env.tel.resetOPD()
 # env.tel*env.dm*env.wfs
+# os.makedirs(savedir+'/datasets', exist_ok=True)
 # wfsf, dmc = make_diverse_dataset(env, size=20000, num_scale=1,\
 #                      min_scale=1e-6, max_scale=1e-6, savedir=savedir+'/datasets', tag='big_boy')
 
-# # X = wfsf
-# # y_raw = dmc
+# X = wfsf
+# y_raw = dmc
 
 # ds_size = len(X)
 
